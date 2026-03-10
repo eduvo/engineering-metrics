@@ -1,0 +1,60 @@
+MB:
+  jira-cycle-time:
+    startStatus: Ready For Development
+    endStatus: Closed
+    filter:
+  jira-bugs:
+    severityFieldName: "Severity"
+    customerBugsFilter: >-
+      issuetype = Bug
+      AND project = MB
+      AND resolution IN (Done, Unresolved)
+      AND status != "On Hold"
+      AND labels = jira_escalated
+      AND ("Root Cause[Dropdown]" NOT IN ("User error", "Configuration error") OR "Root Cause[Dropdown]" IS EMPTY)
+
+MB Mobile:
+  jira-cycle-time:
+    startStatus: Ready For Development
+    endStatus: Closed
+    filter:
+  jira-bugs:
+    severityFieldName: "Severity"
+    customerBugsFilter: >-
+      issuetype = Bug
+      AND project = "MB Mobile"
+      AND resolution IN (Done, Unresolved)
+      AND reporter IN (5acb68d026cefc2b2a21c149, 5c5467057e0b872d022f7f84, 5c7d02fca0c37a763f398ca4, 5acb68d5af21cf2a74834458, 603aecae90289900684090bd, 608209091dcf900068800a0a, 60cebdc7dae5670068c406fb, 62afd10f33a882e2be47dbd4, 5cca16d74c57cb0e4a267e44, 6233b4d672d9010069e47240, 62abc0eb9cd13c0068b1c382, 712020:c02ce371-e3b4-4672-8e82-b8c135d6b681, 712020:ab1ac75f-aee5-41df-a236-3c469ffe4b2a, 712020:d16dacb1-22d4-4a68-a4c3-569ac227c09e, 712020:f983bbfc-01d2-4552-865e-51a671b471b4, 712020:d07ec620-c422-4ff1-aaab-f6af4f06b810, 5e284317cc34b10ca3dbd2bc, 6162312578e5e40070acf8e0, 63978f792aac389d02c1b251, 712020:0000b791-64f5-4964-af84-50fb157cb306, 712020:543432ff-356b-4bed-b74c-0be57c086738, 712020:4c25785b-776e-42ed-9d64-e7ba3a91a74f, 60726a365759fb00695a1f4c, 608f6f0570d1d1006f505b65, 60b89fd5860b9f006ae2dc70, 625cbdaa3b1ee3006b18a24a, 63022deba4f57644346a8512, 712020:a39671f1-4f3a-46f1-a87a-b730d6a32bf6, 62f9a6f288b05653fa7c50fa, 5acb68d42bb3112b34c49d8c, 8806d5dd-bf81-4958-b367-2283fbd573ae, f38a2513-9a16-4950-8d9a-5ad1d8e9c02c, 712020:0c9b2ff1-4487-41e5-b8cd-d071b1f1c8f8)
+      AND status != "On Hold"
+
+OpenApply:
+  jira-cycle-time:
+    startStatus: Ready For Development
+    endStatus: Closed
+    filter:
+  jira-bugs:
+    severityFieldName: "Severity"
+    customerBugsFilter: >-
+      project = OpenApply AND type = Bug AND labels = jira_escalated  AND resolution in (Done, Unresolved)
+
+
+SchoolsBuddy:
+  jira-cycle-time:
+    startStatus: Ready For Development
+    endStatus: Closed
+    filter:
+  jira-bugs:
+    severityFieldName: "Severity"
+    customerBugsFilter: >-
+      project = SchoolsBuddy AND reporter NOT IN (60045bb1e2a1350069502b60, 712020:36171044-223d-4e9a-a1de-6a9bec3a194b, 712020:e8de2168-7f3d-4fb0-9f21-0631fa179024,60f3a823ff85e50071154fb7,5e28405463cc180e63b4e9b3,62ef80d9f15eecaf500f27f7,63d724af614cb4ba53fdad79,712020:bee1a77d-817b-4a63-a814-61a687cc506e,712020:d509a0a4-e453-4fc6-b2c9-c6c255e827ac,712020:f895d676-9e05-414a-b08d-55d232a9c002,712020:d638ba06-c68b-4a87-b089-e8a3ba3bcbd2,712020:fc7a877d-c2f4-471f-ad62-daebb2c1b5ae,63fd65a081de11a1adf93010, 63fd669681de11a1adf93040,6177ab33f6da6a006af80d06,62027b05733407006754355b,5c8f5ece583f592c63c73c0d,625633e90630bd007075d1ad,5e2841ce76f1a50e68c925b7,5e15c0f45361330daaeb3311,5e8434d2db49780c1497d14b,5eb9264e021ae30ba8532f56,5eb9264e833be70b7e232f58,5e78a8a27276650c2d44741b,61ed18695a0988006b0f09b7) AND issuetype in (Bug) AND status != "Cancelled/Deferred" 
+
+Atlas-Portland:
+  jira-cycle-time:
+    startStatus: Ready For Development
+    endStatus: Closed
+    filter:
+  jira-bugs:
+    severityFieldName: "Severity"
+    customerBugsFilter: >-
+      project = Atlas-Portland AND type = Bug 
+      AND reporter NOT in (712020:ede46c0f-d1fa-4ac3-98a0-22b972f68e41,5cdaeba2bc70090d6ce26a03, 5c0ebe98ed26a5223c950ebb, 557058:f246e2d6-52c8-46d6-bf61-f193adda3ee1, 6065c4721613f30068120e9f,5ff29ff734847e0069e56c39, 712020:500ef365-e31e-42da-9191-4f1cf9de373e, 5b73f8342708b7654dc235be)

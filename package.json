@@ -1,0 +1,25 @@
+{
+  "name": "metrics-agent",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "etl": "tsx src/index.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.13.6",
+    "commander": "^14.0.3",
+    "dotenv": "^17.3.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.4.0"
+  }
+}
