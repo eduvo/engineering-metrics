@@ -22,7 +22,7 @@ export interface BugsConfig {
   severityFieldName: string;
 }
 
-export interface ProjectConfig {
+export interface TeamConfig {
   "jira-cycle-time"?: CycleTimeConfig;
   "jira-bugs"?: BugsConfig;
 }
@@ -43,28 +43,28 @@ export function loadJiraConfig(): JiraConfig {
   };
 }
 
-function loadConfig(): Record<string, ProjectConfig> {
+function loadConfig(): Record<string, TeamConfig> {
   const configPath = path.resolve(process.cwd(), "config.yaml");
 
   try {
     return parseYaml(readFileSync(configPath, "utf-8"));
   } catch {
-    throw new Error(`Missing or invalid config.yaml. Create it with per-project pipeline configs.`);
+    throw new Error(`Missing or invalid config.yaml. Create it with per-team pipeline configs.`);
   }
 }
 
-export function loadProjectConfig(projectKey: string): ProjectConfig {
-  const projects = loadConfig();
-  const config = projects[projectKey];
+export function loadTeamConfig(teamKey: string): TeamConfig {
+  const teams = loadConfig();
+  const config = teams[teamKey];
   if (!config) {
     throw new Error(
-      `No config found for project "${projectKey}" in config.yaml. Available: ${Object.keys(projects).join(", ")}`,
+      `No config found for team "${teamKey}" in config.yaml. Available: ${Object.keys(teams).join(", ")}`,
     );
   }
 
   return config;
 }
 
-export function loadAllProjectConfigs(): Record<string, ProjectConfig> {
+export function loadAllTeamConfigs(): Record<string, TeamConfig> {
   return loadConfig();
 }

@@ -5,14 +5,14 @@ export interface SeverityStats {
   medianTimeToResolveDays: number | null;
 }
 
-export interface ProjectBugsSummary {
+export interface TeamBugsSummary {
   monthly: Record<string, Record<string, SeverityStats>>;
   total: Record<string, SeverityStats>;
 }
 
 export interface BugsSummary {
-  projects: Record<string, ProjectBugsSummary>;
-  crossProject: {
+  teams: Record<string, TeamBugsSummary>;
+  crossTeam: {
     monthly: Record<string, Record<string, SeverityStats>>;
     total: Record<string, SeverityStats>;
   };
@@ -59,7 +59,7 @@ function groupByMonth(records: BugRecord[]): Record<string, BugRecord[]> {
   return groups;
 }
 
-export function summarizeProject(records: BugRecord[]): ProjectBugsSummary {
+export function summarizeTeam(records: BugRecord[]): TeamBugsSummary {
   const monthly: Record<string, Record<string, SeverityStats>> = {};
   for (const [month, recs] of Object.entries(groupByMonth(records))) {
     monthly[month] = computeSeverityStats(recs);
@@ -70,12 +70,12 @@ export function summarizeProject(records: BugRecord[]): ProjectBugsSummary {
   };
 }
 
-export function summarizeAll(projectRecords: Record<string, BugRecord[]>): BugsSummary {
-  const projects: Record<string, ProjectBugsSummary> = {};
+export function summarizeAll(teamRecords: Record<string, BugRecord[]>): BugsSummary {
+  const teams: Record<string, TeamBugsSummary> = {};
   const allRecords: BugRecord[] = [];
 
-  for (const [key, records] of Object.entries(projectRecords)) {
-    projects[key] = summarizeProject(records);
+  for (const [key, records] of Object.entries(teamRecords)) {
+    teams[key] = summarizeTeam(records);
     allRecords.push(...records);
   }
 
@@ -85,8 +85,8 @@ export function summarizeAll(projectRecords: Record<string, BugRecord[]>): BugsS
   }
 
   return {
-    projects,
-    crossProject: {
+    teams,
+    crossTeam: {
       monthly: crossMonthly,
       total: computeSeverityStats(allRecords),
     },

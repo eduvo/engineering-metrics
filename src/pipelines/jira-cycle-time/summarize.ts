@@ -6,10 +6,19 @@ export interface CycleTimeStats {
   medianCycleTimeDays: number | null;
 }
 
-export interface ProjectCycleTimeSummary {
+export interface TeamCycleTimeSummary {
   monthly: Record<string, CycleTimeStats>;
   quarterly: Record<string, CycleTimeStats>;
   total: CycleTimeStats;
+}
+
+export interface CycleTimeSummary {
+  teams: Record<string, TeamCycleTimeSummary>;
+  crossTeam: {
+    monthly: Record<string, CycleTimeStats>;
+    quarterly: Record<string, CycleTimeStats>;
+    total: CycleTimeStats;
+  };
 }
 
 function median(values: number[]): number | null {
@@ -66,7 +75,7 @@ function groupByQuarter(records: MetricRecord[]): Record<string, MetricRecord[]>
   return groups;
 }
 
-export function summarizeCycleTime(records: MetricRecord[]): ProjectCycleTimeSummary {
+export function summarizeCycleTime(records: MetricRecord[]): TeamCycleTimeSummary {
   const monthly: Record<string, CycleTimeStats> = {};
   for (const [month, recs] of Object.entries(groupByMonth(records)).sort(([a], [b]) => a.localeCompare(b))) {
     monthly[month] = computeStats(recs);
@@ -81,5 +90,34 @@ export function summarizeCycleTime(records: MetricRecord[]): ProjectCycleTimeSum
     monthly,
     quarterly,
     total: computeStats(records),
+  };
+}
+
+export function summarizeAll(teamRecords: Record<string, MetricRecord[]>): CycleTimeSummary {
+  const teams: Record<string, TeamCycleTimeSummary> = {};
+  const allRecords: MetricRecord[] = [];
+
+  for (const [key, records] of Object.entries(teamRecords)) {
+    teams[key] = summarizeCycleTime(records);
+    allRecords.push(...records);
+  }
+
+  const crossMonthly: Record<string, CycleTimeStats> = {};
+  for (const [month, recs] of Object.entries(groupByMonth(allRecords)).sort(([a], [b]) => a.localeCompare(b))) {
+    crossMonthly[month] = computeStats(recs);
+  }
+
+  const crossQuarterly: Record<string, CycleTimeStats> = {};
+  for (const [quarter, recs] of Object.entries(groupByQuarter(allRecords)).sort(([a], [b]) => a.localeCompare(b))) {
+    crossQuarterly[quarter] = computeStats(recs);
+  }
+
+  return {
+    teams,
+    crossTeam: {
+      monthly: crossMonthly,
+      quarterly: crossQuarterly,
+      total: computeStats(allRecords),
+    },
   };
 }

@@ -1,7 +1,6 @@
 import { Command } from "commander";
-import { loadJiraConfig, loadProjectConfig, loadAllProjectConfigs } from "./config.js";
-import { JiraCycleTimePipeline } from "./pipelines/jira-cycle-time/index.js";
-import { ProjectCycleTimeSummary } from "./pipelines/jira-cycle-time/summarize.js";
+import { loadJiraConfig, loadTeamConfig, loadAllTeamConfigs } from "./config.js";
+import { JiraCycleTimePipeline, summarizeAll as summarizeAllCycleTime } from "./pipelines/jira-cycle-time/index.js";
 import { JiraBugsPipeline, summarizeAll } from "./pipelines/jira-bugs/index.js";
 import { saveJson } from "./loaders/json-loader.js";
 
@@ -15,111 +14,129 @@ program
 program
   .command("jira-cycle-time")
   .description("Extract JIRA issues and compute cycle time")
-  .option("-p, --project <key>", "JIRA project key (e.g., MYPROJ). If omitted, runs for all configured projects.")
+  .option("-t, --team <key>", "Team key (JIRA project key, e.g., MYPROJ). If omitted, runs for all configured teams.")
   .option("-s, --since <date>", "Start date for resolved issues (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date for resolved issues (YYYY-MM-DD)")
-  .action(async (opts: { project?: string; since: string; until?: string }) => {
+  .action(async (opts: { team?: string; since: string; until?: string }) => {
     const config = loadJiraConfig();
-    const allProjects = loadAllProjectConfigs();
-    const projectKeys = opts.project
-      ? [opts.project]
-      : Object.entries(allProjects)
+    const allTeams = loadAllTeamConfigs();
+    const teamKeys = opts.team
+      ? [opts.team]
+      : Object.entries(allTeams)
           .filter(([, c]) => c["jira-cycle-time"])
           .map(([key]) => key);
 
-    if (projectKeys.length === 0) {
-      console.log("No projects with jira-cycle-time config found in config.yaml.");
+    if (teamKeys.length === 0) {
+      console.log("No teams with jira-cycle-time config found in config.yaml.");
       return;
     }
 
-    for (const projectKey of projectKeys) {
-      const projectConfig = loadProjectConfig(projectKey);
-      const cycleTimeConfig = projectConfig["jira-cycle-time"];
+    const teamRecords: Record<string, import("./types.js").MetricRecord[]> = {};
+
+    for (const teamKey of teamKeys) {
+      const teamConfig = loadTeamConfig(teamKey);
+      const cycleTimeConfig = teamConfig["jira-cycle-time"];
 
       if (!cycleTimeConfig) {
-        if (opts.project) {
-          throw new Error(`Project "${projectKey}" must have jira-cycle-time config in config.yaml.`);
+        if (opts.team) {
+          throw new Error(`Team "${teamKey}" must have jira-cycle-time config in config.yaml.`);
         }
         continue;
       }
 
-      console.log(`\n=== Project: ${projectKey} ===`);
+      console.log(`\n=== Team: ${teamKey} ===`);
       console.log(`Using statuses: "${cycleTimeConfig.startStatus}" → "${cycleTimeConfig.endStatus}"`);
 
       const pipeline = new JiraCycleTimePipeline(config, cycleTimeConfig, {
-        projectKey,
+        projectKey: teamKey,
         since: opts.since,
         until: opts.until,
         filter: cycleTimeConfig.filter,
       });
 
-      const result = await pipeline.run();
-      const summary = result.summary as unknown as ProjectCycleTimeSummary;
+      console.log(`[jira-cycle-time] Extracting...`);
+      const raw = await pipeline.extract();
+      console.log(`[jira-cycle-time] Extracted ${raw.length} raw records`);
 
-      console.log("\n--- Summary ---");
-      console.log(`Pipeline:  ${result.pipelineName}`);
-      console.log(`Project:   ${projectKey}`);
-      console.log(`Records:   ${result.recordCount}`);
+      console.log(`[jira-cycle-time] Transforming...`);
+      const records = pipeline.transform(raw);
+      console.log(`[jira-cycle-time] Transformed into ${records.length} metric records`);
 
-      if (summary.total.averageCycleTimeDays !== null) {
-        console.log(`Avg Cycle: ${summary.total.averageCycleTimeDays} days`);
-        console.log(`Med Cycle: ${summary.total.medianCycleTimeDays} days`);
-      }
-
-      console.log(`\n  Monthly:`);
-      for (const [month, stats] of Object.entries(summary.monthly)) {
-        console.log(`    ${month}: ${stats.ticketCount} tickets, avg ${stats.averageCycleTimeDays ?? "N/A"} days, median ${stats.medianCycleTimeDays ?? "N/A"} days`);
-      }
-
-      console.log(`\n  Quarterly:`);
-      for (const [quarter, stats] of Object.entries(summary.quarterly)) {
-        console.log(`    ${quarter}: ${stats.ticketCount} tickets, avg ${stats.averageCycleTimeDays ?? "N/A"} days, median ${stats.medianCycleTimeDays ?? "N/A"} days`);
-      }
-
-      console.log(`\nOutput:    ${result.outputPath}`);
-      console.log(`Started:   ${result.startedAt}`);
-      console.log(`Finished:  ${result.finishedAt}`);
+      teamRecords[teamKey] = records;
     }
+
+    const summary = summarizeAllCycleTime(teamRecords);
+    const allRecords = Object.values(teamRecords).flat();
+
+    console.log(`\n[jira-cycle-time] Loading...`);
+    const outputPath = await saveJson("jira-cycle-time", { summary, records: teamRecords });
+    console.log(`[jira-cycle-time] Done -> ${outputPath}`);
+
+    console.log("\n--- Summary ---");
+    console.log(`Total Records: ${allRecords.length}`);
+    for (const [teamKey, teamSummary] of Object.entries(summary.teams)) {
+      console.log(`\n  ${teamKey}:`);
+      console.log(`    Total: ${teamSummary.total.ticketCount} tickets, avg ${teamSummary.total.averageCycleTimeDays ?? "N/A"} days, median ${teamSummary.total.medianCycleTimeDays ?? "N/A"} days`);
+      console.log(`    Monthly:`);
+      for (const [month, stats] of Object.entries(teamSummary.monthly)) {
+        console.log(`      ${month}: ${stats.ticketCount} tickets, avg ${stats.averageCycleTimeDays ?? "N/A"} days, median ${stats.medianCycleTimeDays ?? "N/A"} days`);
+      }
+      console.log(`    Quarterly:`);
+      for (const [quarter, stats] of Object.entries(teamSummary.quarterly)) {
+        console.log(`      ${quarter}: ${stats.ticketCount} tickets, avg ${stats.averageCycleTimeDays ?? "N/A"} days, median ${stats.medianCycleTimeDays ?? "N/A"} days`);
+      }
+    }
+    console.log(`\n  Cross-team:`);
+    console.log(`    Total: ${summary.crossTeam.total.ticketCount} tickets, avg ${summary.crossTeam.total.averageCycleTimeDays ?? "N/A"} days, median ${summary.crossTeam.total.medianCycleTimeDays ?? "N/A"} days`);
+    console.log(`    Monthly:`);
+    for (const [month, stats] of Object.entries(summary.crossTeam.monthly)) {
+      console.log(`      ${month}: ${stats.ticketCount} tickets, avg ${stats.averageCycleTimeDays ?? "N/A"} days, median ${stats.medianCycleTimeDays ?? "N/A"} days`);
+    }
+    console.log(`    Quarterly:`);
+    for (const [quarter, stats] of Object.entries(summary.crossTeam.quarterly)) {
+      console.log(`      ${quarter}: ${stats.ticketCount} tickets, avg ${stats.averageCycleTimeDays ?? "N/A"} days, median ${stats.medianCycleTimeDays ?? "N/A"} days`);
+    }
+    console.log(`\nOutput:      ${outputPath}`);
   });
 
 program
   .command("jira-bugs")
   .description("Extract JIRA bugs matching a customer bugs filter and count them")
-  .option("-p, --project <key>", "JIRA project key (e.g., MYPROJ). If omitted, runs for all configured projects.")
+  .option("-t, --team <key>", "Team key (JIRA project key, e.g., MYPROJ). If omitted, runs for all configured teams.")
   .option("-s, --since <date>", "Start date for created issues (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date for created issues (YYYY-MM-DD)")
-  .action(async (opts: { project?: string; since: string; until?: string }) => {
+  .action(async (opts: { team?: string; since: string; until?: string }) => {
     const config = loadJiraConfig();
-    const allProjects = loadAllProjectConfigs();
-    const projectKeys = opts.project
-      ? [opts.project]
-      : Object.entries(allProjects)
+    const allTeams = loadAllTeamConfigs();
+    const teamKeys = opts.team
+      ? [opts.team]
+      : Object.entries(allTeams)
           .filter(([, c]) => c["jira-bugs"])
           .map(([key]) => key);
 
-    if (projectKeys.length === 0) {
-      console.log("No projects with jira-bugs config found in config.yaml.");
+    if (teamKeys.length === 0) {
+      console.log("No teams with jira-bugs config found in config.yaml.");
       return;
     }
 
-    const projectRecords: Record<string, import("./types.js").BugRecord[]> = {};
+    const teamRecords: Record<string, import("./types.js").BugRecord[]> = {};
 
-    for (const projectKey of projectKeys) {
-      const projectConfig = loadProjectConfig(projectKey);
-      const bugsConfig = projectConfig["jira-bugs"];
+    for (const teamKey of teamKeys) {
+      const teamConfig = loadTeamConfig(teamKey);
+      const bugsConfig = teamConfig["jira-bugs"];
 
       if (!bugsConfig) {
-        if (opts.project) {
-          throw new Error(`Project "${projectKey}" must have jira-bugs config in config.yaml.`);
+        if (opts.team) {
+          throw new Error(`Team "${teamKey}" must have jira-bugs config in config.yaml.`);
         }
         continue;
       }
 
-      console.log(`\n=== Project: ${projectKey} ===`);
+      console.log(`\n=== Team: ${teamKey} ===`);
       console.log(`Using customerBugsFilter: ${bugsConfig.customerBugsFilter}`);
 
       const pipeline = new JiraBugsPipeline(config, {
-        projectKey,
+        projectKey: teamKey,
         since: opts.since,
         until: opts.until,
         customerBugsFilter: bugsConfig.customerBugsFilter,
@@ -134,29 +151,29 @@ program
       const records = pipeline.transform(raw);
       console.log(`[jira-bugs] Transformed into ${records.length} bug records`);
 
-      projectRecords[projectKey] = records;
+      teamRecords[teamKey] = records;
     }
 
-    const summary = summarizeAll(projectRecords);
-    const allRecords = Object.values(projectRecords).flat();
+    const summary = summarizeAll(teamRecords);
+    const allRecords = Object.values(teamRecords).flat();
 
     console.log(`\n[jira-bugs] Loading...`);
-    const outputPath = await saveJson("jira-bugs", { summary, records: projectRecords });
+    const outputPath = await saveJson("jira-bugs", { summary, records: teamRecords });
     console.log(`[jira-bugs] Done -> ${outputPath}`);
 
     console.log("\n--- Summary ---");
     console.log(`Total Bugs:  ${allRecords.length}`);
-    for (const [projectKey, projectSummary] of Object.entries(summary.projects)) {
-      console.log(`\n  ${projectKey}:`);
-      for (const [sev, stats] of Object.entries(projectSummary.total)) {
+    for (const [teamKey, teamSummary] of Object.entries(summary.teams)) {
+      console.log(`\n  ${teamKey}:`);
+      for (const [sev, stats] of Object.entries(teamSummary.total)) {
         console.log(`    ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days`);
       }
     }
-    console.log(`\n  Cross-project:`);
-    for (const [sev, stats] of Object.entries(summary.crossProject.total)) {
+    console.log(`\n  Cross-team:`);
+    for (const [sev, stats] of Object.entries(summary.crossTeam.total)) {
       console.log(`    ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days`);
     }
-    for (const [month, sevStats] of Object.entries(summary.crossProject.monthly).sort(([a], [b]) => a.localeCompare(b))) {
+    for (const [month, sevStats] of Object.entries(summary.crossTeam.monthly).sort(([a], [b]) => a.localeCompare(b))) {
       console.log(`    ${month}:`);
       for (const [sev, stats] of Object.entries(sevStats)) {
         console.log(`      ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days`);

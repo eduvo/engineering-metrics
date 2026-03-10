@@ -18,7 +18,7 @@ Extensible ETL system for engineering metrics. See `docs/architecture.md` for fu
 
 - Pipeline output goes to `data/` (gitignored)
 - Environment variables prefixed by data source (e.g., `JIRA_*`)
-- Per-project pipeline config lives in `config.yaml` at the project root
+- Per-team pipeline config lives in `config.yaml` at the project root
 - Shared JIRA API logic (auth, pagination) lives in `src/shared/`
 - Status matching in transformers is case-insensitive
 - Raw extraction returns source API native types; transformation maps to pipeline-specific record types (`MetricRecord`, `BugRecord`)

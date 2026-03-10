@@ -10,7 +10,7 @@ An extensible ETL system that extracts engineering metrics from external tools (
 metrics-agent/
 ├── src/
 │   ├── index.ts                       # CLI entry point (commander)
-│   ├── config.ts                      # Environment + project config loader
+│   ├── config.ts                      # Environment + team config loader
 │   ├── types.ts                       # Shared types: MetricRecord, BugRecord, ETLResult, PipelineSummary
 │   ├── shared/
 │   │   ├── jira-types.ts              # Shared JIRA API response types
@@ -23,15 +23,15 @@ metrics-agent/
 │       │   ├── types.ts               # Cycle-time-specific types & options
 │       │   ├── extract.ts             # Cycle-time extraction (delegates to shared jira-api)
 │       │   ├── transform.ts           # Cycle time computation from changelog
-│       │   ├── summarize.ts           # Per-project summary: monthly, quarterly, total
+│       │   ├── summarize.ts           # Per-team summary: monthly, quarterly, total
 │       │   └── index.ts               # JiraCycleTimePipeline class
 │       └── jira-bugs/
 │           ├── types.ts               # Bug pipeline options (customerBugsFilter)
 │           ├── extract.ts             # Bug extraction with custom JQL filter
 │           ├── transform.ts           # Bug record mapping + time-to-resolve + severity
-│           ├── summarize.ts           # Multi-level summary: per-project/cross-project × monthly/total × severity
+│           ├── summarize.ts           # Multi-level summary: per-team/cross-team × monthly/total × severity
 │           └── index.ts               # JiraBugsPipeline class
-├── config.yaml                        # Per-project pipeline configuration
+├── config.yaml                        # Per-team pipeline configuration
 ├── data/                              # Pipeline output (gitignored)
 ├── .env                               # JIRA connection credentials (gitignored)
 ├── .env.example                       # Template for required env vars
@@ -115,7 +115,7 @@ Common JIRA integration code shared across all JIRA-based pipelines:
 | `JIRA_EMAIL`     | Yes      | Atlassian account email           |
 | `JIRA_API_TOKEN` | Yes      | Atlassian API token               |
 
-**Per-project pipeline config** (`config.yaml`):
+**Per-team pipeline config** (`config.yaml`):
 
 ```yaml
 MB:
@@ -131,21 +131,21 @@ MB:
       AND labels = jira_escalated
 ```
 
-Settings are nested under each pipeline name within each project key:
+Settings are nested under each pipeline name within each team key:
 - `jira-cycle-time.startStatus` / `jira-cycle-time.endStatus`: Cycle time status boundaries (case-insensitive matching)
 - `jira-cycle-time.filter` (optional): Additional JQL fragment AND-ed with the project key and date range. Leave empty or omit to include all resolved issues.
 - `jira-bugs.customerBugsFilter`: JQL fragment AND-ed with project + date range for the bugs pipeline
 - `jira-bugs.severityFieldName`: JIRA field name for the Severity dropdown (e.g., `Severity[Dropdown]`). Resolved to a custom field ID at runtime via the JIRA fields API. The pipeline extracts the first two characters of the field value (e.g., `S1` from `S1 - Critical`).
 
-Projects only need config sections for the pipelines they use. When running without `--project`, each pipeline auto-discovers projects that have its config section.
+Teams only need config sections for the pipelines they use. When running without `--team`, each pipeline auto-discovers teams that have its config section.
 
 ### CLI Usage
 
 ```bash
-npm run etl -- jira-cycle-time [--project <KEY>] [--since YYYY-MM-DD] [--until YYYY-MM-DD]
+npm run etl -- jira-cycle-time [--team <KEY>] [--since YYYY-MM-DD] [--until YYYY-MM-DD]
 ```
 
-- `--project` (optional): JIRA project key. If omitted, runs for all projects in `config.yaml` that have `startStatus` and `endStatus` configured.
+- `--team` (optional): JIRA project key. If omitted, runs for all teams in `config.yaml` that have `startStatus` and `endStatus` configured.
 - `--since` (default: `2026-02-09`): Only issues resolved on or after this date
 - `--until` (optional): Only issues resolved on or before this date
 
@@ -167,13 +167,18 @@ npm run etl -- jira-cycle-time [--project <KEY>] [--since YYYY-MM-DD] [--until Y
 
 ### Summarize (`src/pipelines/jira-cycle-time/summarize.ts`)
 
-Produces a `ProjectCycleTimeSummary` with three levels, each containing `CycleTimeStats` (ticket count, average, and median cycle time):
+Produces a `CycleTimeSummary` with per-team and cross-team levels, each containing `CycleTimeStats` (ticket count, average, and median cycle time):
 
 | Level | Key | Bucketing |
-|-------|-----|-----------|
-| Monthly | `monthly.<YYYY-MM>` | By resolved month |
-| Quarterly | `quarterly.<YYYY-QN>` | By resolved quarter |
-| Total | `total` | All records |
+|-------|-----|----------|
+| Per team monthly | `teams.<KEY>.monthly.<YYYY-MM>` | By resolved month |
+| Per team quarterly | `teams.<KEY>.quarterly.<YYYY-QN>` | By resolved quarter |
+| Per team total | `teams.<KEY>.total` | All records for team |
+| Cross-team monthly | `crossTeam.monthly.<YYYY-MM>` | By resolved month across all teams |
+| Cross-team quarterly | `crossTeam.quarterly.<YYYY-QN>` | By resolved quarter across all teams |
+| Cross-team total | `crossTeam.total` | All records across all teams |
+
+When multiple teams are configured, all are extracted and transformed independently, then a combined output file is produced with cross-team aggregations.
 
 Tickets are assigned to a month/quarter based on their `resolvedDate` (or `endDate` if `resolvedDate` is null).
 
@@ -184,25 +189,25 @@ Tickets are assigned to a month/quarter based on their `resolvedDate` (or `endDa
 
 ## JIRA Bugs Pipeline
 
-Counts customer-reported bugs matching a configurable JQL filter, broken down by severity, with monthly and overall summaries per project and cross-project.
+Counts customer-reported bugs matching a configurable JQL filter, broken down by severity, with monthly and overall summaries per team and cross-team.
 
 ### Configuration
 
 Uses the same JIRA connection credentials (`.env`) as the cycle-time pipeline.
 
-Requires a `customerBugsFilter` JQL fragment and `severityFieldName` in `config.yaml` for each project. The filter is AND-ed with the project key and date range.
+Requires a `customerBugsFilter` JQL fragment and `severityFieldName` in `config.yaml` for each team. The filter is AND-ed with the project key and date range.
 
 ### CLI Usage
 
 ```bash
-npm run etl -- jira-bugs [--project <KEY>] [--since YYYY-MM-DD] [--until YYYY-MM-DD]
+npm run etl -- jira-bugs [--team <KEY>] [--since YYYY-MM-DD] [--until YYYY-MM-DD]
 ```
 
-- `--project` (optional): JIRA project key. If omitted, runs for all projects in `config.yaml` that have a `customerBugsFilter` configured.
+- `--team` (optional): JIRA project key. If omitted, runs for all teams in `config.yaml` that have a `customerBugsFilter` configured.
 - `--since` (default: `2026-02-09`): Only issues created on or after this date
 - `--until` (optional): Only issues created on or before this date
 
-When multiple projects are configured, all are extracted and transformed independently, then a combined output file is produced with cross-project aggregations.
+When multiple teams are configured, all are extracted and transformed independently, then a combined output file is produced with cross-team aggregations.
 
 ### Extract (`src/pipelines/jira-bugs/extract.ts`)
 
@@ -224,10 +229,10 @@ Produces a four-level summary structure (`BugsSummary`), each level broken down 
 
 | Level | Key | Description |
 |-------|-----|-------------|
-| Per project per month | `projects.<KEY>.monthly.<YYYY-MM>.<severity>` | Total bugs and median TTR for each severity in each month |
-| Per project total | `projects.<KEY>.total.<severity>` | Total bugs and median TTR for each severity across all months |
-| Cross-project per month | `crossProject.monthly.<YYYY-MM>.<severity>` | Total bugs and median TTR for each severity across all projects in each month |
-| Cross-project total | `crossProject.total.<severity>` | Total bugs and median TTR for each severity across all projects and months |
+| Per team per month | `teams.<KEY>.monthly.<YYYY-MM>.<severity>` | Total bugs and median TTR for each severity in each month |
+| Per team total | `teams.<KEY>.total.<severity>` | Total bugs and median TTR for each severity across all months |
+| Cross-team per month | `crossTeam.monthly.<YYYY-MM>.<severity>` | Total bugs and median TTR for each severity across all teams in each month |
+| Cross-team total | `crossTeam.total.<severity>` | Total bugs and median TTR for each severity across all teams and months |
 
 Each severity entry is a `SeverityStats` object:
 
@@ -269,7 +274,7 @@ The pipeline summary includes:
 
 2. Add a config loader function in `src/config.ts` (if new env vars are needed)
 
-3. Add per-project config to `config.yaml` (if project-specific settings are needed)
+3. Add per-team config to `config.yaml` (if team-specific settings are needed)
 
 4. Add a new commander subcommand in `src/index.ts`
 
@@ -285,4 +290,4 @@ The pipeline summary includes:
 | `dotenv` without override | Env vars set in shell take precedence over `.env` file |
 | `tsx` for execution | Run TypeScript directly without a build step |
 | No offset-based pagination | JIRA v3 search/jql does not support `startAt`/`total` |
-| Per-project `config.yaml` | Different JIRA projects use different workflow statuses and filters |
+| Per-team `config.yaml` | Different JIRA projects use different workflow statuses and filters |

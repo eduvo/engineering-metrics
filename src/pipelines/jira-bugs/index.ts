@@ -5,7 +5,7 @@ import { JiraIssue } from "../../shared/jira-types.js";
 import { JiraBugsExtractOptions } from "./types.js";
 import { extractJiraBugs } from "./extract.js";
 import { transformBugs } from "./transform.js";
-import { summarizeProject } from "./summarize.js";
+import { summarizeTeam } from "./summarize.js";
 import { saveJson } from "../../loaders/json-loader.js";
 
 export { summarizeAll } from "./summarize.js";
@@ -33,7 +33,7 @@ export class JiraBugsPipeline extends Pipeline<JiraIssue, BugRecord> {
   }
 
   summarize(records: BugRecord[]): PipelineSummary {
-    return summarizeProject(records) as unknown as PipelineSummary;
+    return summarizeTeam(records) as unknown as PipelineSummary;
   }
 
   async load(records: BugRecord[], summary: PipelineSummary): Promise<string> {

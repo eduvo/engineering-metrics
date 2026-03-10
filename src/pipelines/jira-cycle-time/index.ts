@@ -7,6 +7,9 @@ import { computeCycleTime } from "./transform.js";
 import { summarizeCycleTime } from "./summarize.js";
 import { saveJson } from "../../loaders/json-loader.js";
 
+export { summarizeAll } from "./summarize.js";
+export type { CycleTimeSummary } from "./summarize.js";
+
 export class JiraCycleTimePipeline extends Pipeline<JiraIssue, MetricRecord> {
   readonly name = "jira-cycle-time";
 
