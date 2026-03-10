@@ -16,14 +16,17 @@ metrics-agent/
 │   │   ├── jira-types.ts              # Shared JIRA API response types
 │   │   ├── jira-api.ts                # Shared JIRA fetch with pagination & auth
 │   │   ├── github-types.ts            # GitHub API response types
-│   │   └── github-api.ts              # GitHub Search API client with pagination & rate limit handling
+│   │   ├── github-api.ts              # GitHub Search API client with pagination & rate limit handling
+│   │   ├── newrelic-types.ts           # NerdGraph API response types
+│   │   └── newrelic-api.ts             # NerdGraph (GraphQL) NRQL query client
 │   ├── loaders/
 │   │   └── json-loader.ts             # Writes JSON to data/ directory
 │   └── pipelines/
 │       ├── base.ts                    # Abstract Pipeline<TRaw, TTransformed>
 │       ├── jira-cycle-time/           # Cycle time between JIRA status transitions
 │       ├── jira-bugs/                 # Customer bug counts by severity
-│       └── github-prs/               # GitHub PR metrics (count, time-to-close, contributors)
+│       ├── github-prs/               # GitHub PR metrics (count, time-to-close, contributors)
+│       └── newrelic-errors/          # New Relic APM & JS error rates per app
 ├── config.yaml                        # Per-team pipeline configuration
 ├── data/                              # Pipeline output (gitignored)
 ├── docs/                              # Pipeline-specific documentation
@@ -79,6 +82,7 @@ Teams only need config sections for the pipelines they use. When running without
 | `jira-cycle-time` | JIRA API | Cycle time between status transitions (avg, median) | [docs/jira-cycle-time.md](jira-cycle-time.md) |
 | `jira-bugs` | JIRA API | Bug counts by severity, time-to-resolve | [docs/jira-bugs.md](jira-bugs.md) |
 | `github-prs` | GitHub Search API | PR count, time-to-close, contributors | [docs/github-prs.md](github-prs.md) |
+| `newrelic-errors` | New Relic NerdGraph API | APM error rate %, JS error rate % per app | [docs/newrelic-errors.md](newrelic-errors.md) |
 
 Each pipeline produces per-team and cross-team summaries bucketed by month and quarter.
 
@@ -98,13 +102,20 @@ Each pipeline produces per-team and cross-team summaries bucketed by month and q
 - Automatic date-range splitting when results exceed the 1,000 result limit
 - Rate limit retry with exponential back-off
 
+### New Relic (`src/shared/newrelic-api.ts`, `src/shared/newrelic-types.ts`)
+
+- Authentication: User API key via `API-Key` header
+- API: NerdGraph (GraphQL) at `https://api.newrelic.com/graphql`
+- NRQL queries for APM error rate (`Transaction` events) and JS error rate (`PageView`/`JavaScriptError` events)
+- Results faceted by `appName` and `monthOf(timestamp)`
+
 ## CLI
 
 ```bash
 npm run etl -- <pipeline> [--team <KEY>] [--since YYYY-MM-DD] [--until YYYY-MM-DD]
 ```
 
-Available pipelines: `jira-cycle-time`, `jira-bugs`, `github-prs`.
+Available pipelines: `jira-cycle-time`, `jira-bugs`, `github-prs`, `newrelic-errors`.
 
 ## Adding a New Pipeline
 

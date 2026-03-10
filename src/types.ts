@@ -47,6 +47,17 @@ export interface PRRecord {
   url: string;
 }
 
+export interface ErrorRateRecord {
+  appName: string;
+  dataType: "apm-sla" | "javascript";
+  month: string;
+  errorRatePercent: number;
+  apdex?: number;
+  satisfiedPercent?: number;
+  responseTimeMs?: number;
+  throughputRpm?: number;
+}
+
 export interface ETLResult {
   pipelineName: string;
   recordCount: number;

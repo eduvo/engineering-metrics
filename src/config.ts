@@ -26,10 +26,22 @@ export interface GitHubPRsConfig {
   repos: string[];
 }
 
+export interface NewRelicConfig {
+  apiKey: string;
+  accountId: number;
+  apiUrl: string;
+  restApiUrl: string;
+}
+
+export interface NewRelicErrorsConfig {
+  apps: string[];
+}
+
 export interface TeamConfig {
   "jira-cycle-time"?: CycleTimeConfig;
   "jira-bugs"?: BugsConfig;
   "github-prs"?: GitHubPRsConfig;
+  "newrelic-sla"?: NewRelicErrorsConfig;
 }
 
 function requireEnv(name: string): string {
@@ -77,5 +89,16 @@ export function loadAllTeamConfigs(): Record<string, TeamConfig> {
 export function loadGitHubConfig(): { token: string } {
   return {
     token: requireEnv("GITHUB_TOKEN"),
+  };
+}
+
+export function loadNewRelicConfig(): NewRelicConfig {
+  const apiUrl = process.env.NEWRELIC_API_URL || "https://api.newrelic.com/graphql";
+  const restApiUrl = process.env.NEWRELIC_REST_API_URL || apiUrl.replace(/\/graphql$/, "");
+  return {
+    apiKey: requireEnv("NEWRELIC_API_KEY"),
+    accountId: parseInt(requireEnv("NEWRELIC_ACCOUNT_ID"), 10),
+    apiUrl,
+    restApiUrl,
   };
 }

@@ -1,8 +1,9 @@
 import { Command } from "commander";
-import { loadJiraConfig, loadTeamConfig, loadAllTeamConfigs, loadGitHubConfig } from "./config.js";
+import { loadJiraConfig, loadTeamConfig, loadAllTeamConfigs, loadGitHubConfig, loadNewRelicConfig } from "./config.js";
 import { JiraCycleTimePipeline, summarizeAll as summarizeAllCycleTime } from "./pipelines/jira-cycle-time/index.js";
 import { JiraBugsPipeline, summarizeAll } from "./pipelines/jira-bugs/index.js";
 import { GitHubPRsPipeline, summarizeAll as summarizeAllPRs } from "./pipelines/github-prs/index.js";
+import { NewRelicErrorsPipeline, summarizeAll as summarizeAllErrors } from "./pipelines/newrelic-sla/index.js";
 import { saveJson } from "./loaders/json-loader.js";
 
 const program = new Command();
@@ -267,6 +268,89 @@ program
     for (const [quarter, stats] of Object.entries(summary.crossTeam.quarterly)) {
       console.log(`      ${quarter}: ${stats.prCount} PRs, avg close ${stats.averageTimeToCloseDays ?? "N/A"} days, median close ${stats.medianTimeToCloseDays ?? "N/A"} days`);
     }
+    console.log(`\nOutput:      ${outputPath}`);
+  });
+
+program
+  .command("newrelic-sla")
+  .description("Extract APM SLA and Browser error rates from New Relic")
+  .option("-t, --team <key>", "Team key (as in config.yaml). If omitted, runs for all configured teams.")
+  .option("-s, --since <date>", "Start date (YYYY-MM-DD)", "2026-02-09")
+  .option("-u, --until <date>", "End date (YYYY-MM-DD)")
+  .action(async (opts: { team?: string; since: string; until?: string }) => {
+    const nrConfig = loadNewRelicConfig();
+    const allTeams = loadAllTeamConfigs();
+    const teamKeys = opts.team
+      ? [opts.team]
+      : Object.entries(allTeams)
+          .filter(([, c]) => c["newrelic-sla"])
+          .map(([key]) => key);
+
+    if (teamKeys.length === 0) {
+      console.log("No teams with newrelic-sla config found in config.yaml.");
+      return;
+    }
+
+    const teamRecords: Record<string, import("./pipelines/newrelic-sla/types.js").NewRelicRecord[]> = {};
+
+    for (const teamKey of teamKeys) {
+      const teamConfig = loadTeamConfig(teamKey);
+      const errorsConfig = teamConfig["newrelic-sla"];
+
+      if (!errorsConfig) {
+        if (opts.team) {
+          throw new Error(`Team "${teamKey}" must have newrelic-sla config in config.yaml.`);
+        }
+        continue;
+      }
+
+      console.log(`\n=== Team: ${teamKey} ===`);
+      console.log(`Apps: ${errorsConfig.apps.join(", ")}`);
+
+      const pipeline = new NewRelicErrorsPipeline(nrConfig, {
+        apps: errorsConfig.apps,
+        since: opts.since,
+        until: opts.until,
+      });
+
+      console.log(`[newrelic-sla] Extracting...`);
+      const raw = await pipeline.extract();
+      console.log(`[newrelic-sla] Extracted ${raw.length} raw records`);
+
+      console.log(`[newrelic-sla] Transforming...`);
+      const records = pipeline.transform(raw);
+      console.log(`[newrelic-sla] Transformed into ${records.length} records`);
+
+      teamRecords[teamKey] = records;
+    }
+
+    const summary = summarizeAllErrors(teamRecords);
+    const allRecords = Object.values(teamRecords).flat();
+
+    console.log(`\n[newrelic-sla] Loading...`);
+    const outputPath = await saveJson("newrelic-sla", { summary, records: teamRecords });
+    console.log(`[newrelic-sla] Done -> ${outputPath}`);
+
+    console.log("\n--- Summary ---");
+    console.log(`Total Records: ${allRecords.length}`);
+    for (const [teamKey, teamSummary] of Object.entries(summary.teams)) {
+      console.log(`\n  ${teamKey}:`);
+      console.log(`    SLA:`);
+      for (const [month, stats] of Object.entries(teamSummary.apmSla.monthly)) {
+        console.log(`      ${month}:`);
+        for (const [app, appStats] of Object.entries(stats.byApp)) {
+          console.log(`        ${app}: apdex ${appStats.apdex ?? "N/A"}, satisfied ${appStats.satisfiedPercent ?? "N/A"}%, error ${appStats.errorRatePercent ?? "N/A"}%, resp ${appStats.responseTimeMs ?? "N/A"}ms, tput ${appStats.throughputRpm ?? "N/A"} rpm`);
+        }
+      }
+      const t = teamSummary.apmSla.total;
+      console.log(`      Average: apdex ${t.averageApdex ?? "N/A"}, satisfied ${t.averageSatisfiedPercent ?? "N/A"}%, error ${t.averageErrorRatePercent ?? "N/A"}%, resp ${t.averageResponseTimeMs ?? "N/A"}ms, tput ${t.averageThroughputRpm ?? "N/A"} rpm`);
+      console.log(`    Browser Errors - Last 7 days:`);
+      for (const [app, rate] of Object.entries(teamSummary.browserErrors.byApp)) {
+        console.log(`        ${app}: ${rate ?? "N/A"}%`);
+      }
+    }
+    console.log(`\n  Cross-team:`);
+    console.log(`    SLA avg error rate: ${summary.crossTeam.apmSla.total.averageErrorRatePercent ?? "N/A"}%`);
     console.log(`\nOutput:      ${outputPath}`);
   });
 
