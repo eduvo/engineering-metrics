@@ -10,11 +10,25 @@ cp .env.example .env
 # Edit .env with your JIRA credentials
 ```
 
+### Verify Connection
+
+After configuring your `.env`, verify that your credentials work:
+
+```bash
+npm run check-token
+```
+
+This will confirm your JIRA connection and display the authenticated user. Fix any errors before running pipelines — common issues:
+
+- **Authentication failed** — double-check `JIRA_EMAIL` and `JIRA_API_TOKEN`
+- **Access denied** — your account may lack the required JIRA permissions
+- **Cannot reach JIRA** — verify `JIRA_BASE_URL` is correct (e.g., `https://fariaedu.atlassian.net`)
+
 ### Environment Variables
 
 | Variable | Required | Description |
 |---|---|---|
-| `JIRA_BASE_URL` | Yes | Your Atlassian instance URL (e.g., `https://your-domain.atlassian.net`) |
+| `JIRA_BASE_URL` | Yes | Your Atlassian instance URL (e.g., `https://fariaedu.atlassian.net`) |
 | `JIRA_EMAIL` | Yes | Email associated with your Atlassian account |
 | `JIRA_API_TOKEN` | Yes | JIRA Cloud API token ([generate one here](https://id.atlassian.com/manage-profile/security/api-tokens)) |
 
