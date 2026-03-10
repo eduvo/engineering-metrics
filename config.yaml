@@ -12,6 +12,9 @@ MB:
       AND status != "On Hold"
       AND labels = jira_escalated
       AND ("Root Cause[Dropdown]" NOT IN ("User error", "Configuration error") OR "Root Cause[Dropdown]" IS EMPTY)
+  github-prs:
+    repos:
+      - eduvo/mb_rails4
 
 MB Mobile:
   jira-cycle-time:

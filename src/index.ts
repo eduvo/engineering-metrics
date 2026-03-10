@@ -1,7 +1,8 @@
 import { Command } from "commander";
-import { loadJiraConfig, loadTeamConfig, loadAllTeamConfigs } from "./config.js";
+import { loadJiraConfig, loadTeamConfig, loadAllTeamConfigs, loadGitHubConfig } from "./config.js";
 import { JiraCycleTimePipeline, summarizeAll as summarizeAllCycleTime } from "./pipelines/jira-cycle-time/index.js";
 import { JiraBugsPipeline, summarizeAll } from "./pipelines/jira-bugs/index.js";
+import { GitHubPRsPipeline, summarizeAll as summarizeAllPRs } from "./pipelines/github-prs/index.js";
 import { saveJson } from "./loaders/json-loader.js";
 
 const program = new Command();
@@ -178,6 +179,93 @@ program
       for (const [sev, stats] of Object.entries(sevStats)) {
         console.log(`      ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days`);
       }
+    }
+    console.log(`\nOutput:      ${outputPath}`);
+  });
+
+program
+  .command("github-prs")
+  .description("Extract GitHub PRs and compute PR stats (count, time-to-close, per-contributor)")
+  .option("-t, --team <key>", "Team key (as in config.yaml). If omitted, runs for all configured teams.")
+  .option("-s, --since <date>", "Start date for closed PRs (YYYY-MM-DD)", "2026-02-09")
+  .option("-u, --until <date>", "End date for closed PRs (YYYY-MM-DD)")
+  .action(async (opts: { team?: string; since: string; until?: string }) => {
+    const githubConfig = loadGitHubConfig();
+    const allTeams = loadAllTeamConfigs();
+    const teamKeys = opts.team
+      ? [opts.team]
+      : Object.entries(allTeams)
+          .filter(([, c]) => c["github-prs"])
+          .map(([key]) => key);
+
+    if (teamKeys.length === 0) {
+      console.log("No teams with github-prs config found in config.yaml.");
+      return;
+    }
+
+    const teamRecords: Record<string, import("./pipelines/github-prs/types.js").PRRecord[]> = {};
+
+    for (const teamKey of teamKeys) {
+      const teamConfig = loadTeamConfig(teamKey);
+      const prsConfig = teamConfig["github-prs"];
+
+      if (!prsConfig) {
+        if (opts.team) {
+          throw new Error(`Team "${teamKey}" must have github-prs config in config.yaml.`);
+        }
+        continue;
+      }
+
+      console.log(`\n=== Team: ${teamKey} ===`);
+      console.log(`Repos: ${prsConfig.repos.join(", ")}`);
+
+      const pipeline = new GitHubPRsPipeline(githubConfig.token, {
+        repos: prsConfig.repos,
+        since: opts.since,
+        until: opts.until,
+      });
+
+      console.log(`[github-prs] Extracting...`);
+      const raw = await pipeline.extract();
+      console.log(`[github-prs] Extracted ${raw.length} raw PRs`);
+
+      console.log(`[github-prs] Transforming...`);
+      const records = pipeline.transform(raw);
+      console.log(`[github-prs] Transformed into ${records.length} PR records`);
+
+      teamRecords[teamKey] = records;
+    }
+
+    const summary = summarizeAllPRs(teamRecords);
+    const allRecords = Object.values(teamRecords).flat();
+
+    console.log(`\n[github-prs] Loading...`);
+    const outputPath = await saveJson("github-prs", { summary, records: teamRecords });
+    console.log(`[github-prs] Done -> ${outputPath}`);
+
+    console.log("\n--- Summary ---");
+    console.log(`Total PRs: ${allRecords.length}`);
+    for (const [teamKey, teamSummary] of Object.entries(summary.teams)) {
+      console.log(`\n  ${teamKey}:`);
+      console.log(`    Total: ${teamSummary.total.prCount} PRs, avg close ${teamSummary.total.averageTimeToCloseDays ?? "N/A"} days, median close ${teamSummary.total.medianTimeToCloseDays ?? "N/A"} days`);
+      console.log(`    Monthly:`);
+      for (const [month, stats] of Object.entries(teamSummary.monthly)) {
+        console.log(`      ${month}: ${stats.prCount} PRs, avg close ${stats.averageTimeToCloseDays ?? "N/A"} days, median close ${stats.medianTimeToCloseDays ?? "N/A"} days`);
+      }
+      console.log(`    Quarterly:`);
+      for (const [quarter, stats] of Object.entries(teamSummary.quarterly)) {
+        console.log(`      ${quarter}: ${stats.prCount} PRs, avg close ${stats.averageTimeToCloseDays ?? "N/A"} days, median close ${stats.medianTimeToCloseDays ?? "N/A"} days`);
+      }
+    }
+    console.log(`\n  Cross-team:`);
+    console.log(`    Total: ${summary.crossTeam.total.prCount} PRs, avg close ${summary.crossTeam.total.averageTimeToCloseDays ?? "N/A"} days, median close ${summary.crossTeam.total.medianTimeToCloseDays ?? "N/A"} days`);
+    console.log(`    Monthly:`);
+    for (const [month, stats] of Object.entries(summary.crossTeam.monthly)) {
+      console.log(`      ${month}: ${stats.prCount} PRs, avg close ${stats.averageTimeToCloseDays ?? "N/A"} days, median close ${stats.medianTimeToCloseDays ?? "N/A"} days`);
+    }
+    console.log(`    Quarterly:`);
+    for (const [quarter, stats] of Object.entries(summary.crossTeam.quarterly)) {
+      console.log(`      ${quarter}: ${stats.prCount} PRs, avg close ${stats.averageTimeToCloseDays ?? "N/A"} days, median close ${stats.medianTimeToCloseDays ?? "N/A"} days`);
     }
     console.log(`\nOutput:      ${outputPath}`);
   });

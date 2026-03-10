@@ -35,6 +35,18 @@ export interface BugRecord {
   timeToResolveDays: number | null;
 }
 
+export interface PRRecord {
+  repo: string;
+  number: number;
+  title: string;
+  author: string;
+  createdAt: string;
+  closedAt: string | null;
+  mergedAt: string | null;
+  timeToCloseDays: number | null;
+  url: string;
+}
+
 export interface ETLResult {
   pipelineName: string;
   recordCount: number;

@@ -22,9 +22,14 @@ export interface BugsConfig {
   severityFieldName: string;
 }
 
+export interface GitHubPRsConfig {
+  repos: string[];
+}
+
 export interface TeamConfig {
   "jira-cycle-time"?: CycleTimeConfig;
   "jira-bugs"?: BugsConfig;
+  "github-prs"?: GitHubPRsConfig;
 }
 
 function requireEnv(name: string): string {
@@ -67,4 +72,10 @@ export function loadTeamConfig(teamKey: string): TeamConfig {
 
 export function loadAllTeamConfigs(): Record<string, TeamConfig> {
   return loadConfig();
+}
+
+export function loadGitHubConfig(): { token: string } {
+  return {
+    token: requireEnv("GITHUB_TOKEN"),
+  };
 }

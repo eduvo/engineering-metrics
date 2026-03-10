@@ -1,13 +1,13 @@
 # metrics-agent
 
-ETL pipelines for engineering metrics. Extracts data from JIRA and computes metrics such as cycle time and bug counts, with summaries broken down by month, quarter, severity, and team.
+ETL pipelines for engineering metrics. Extracts data from JIRA and GitHub, computing metrics such as cycle time, bug counts, and PR statistics, with summaries broken down by month, quarter, severity, contributor, and team.
 
 ## Setup
 
 ```bash
 npm install
 cp .env.example .env
-# Edit .env with your JIRA credentials
+# Edit .env with your JIRA and GitHub credentials
 ```
 
 ### Verify Connection
@@ -31,6 +31,7 @@ This will confirm your JIRA connection and display the authenticated user. Fix a
 | `JIRA_BASE_URL` | Yes | Your Atlassian instance URL (e.g., `https://fariaedu.atlassian.net`) |
 | `JIRA_EMAIL` | Yes | Email associated with your Atlassian account |
 | `JIRA_API_TOKEN` | Yes | JIRA Cloud API token ([generate one here](https://id.atlassian.com/manage-profile/security/api-tokens)) |
+| `GITHUB_TOKEN` | Yes (for `github-prs`) | GitHub personal access token with `repo` scope ([generate one here](https://github.com/settings/tokens)) |
 
 ### Team Configuration (`config.yaml`)
 
@@ -48,6 +49,9 @@ MB:
       issuetype = Bug
       AND resolution IN (Done, Unresolved)
       AND labels = jira_escalated
+  github-prs:
+    repos:
+      - managebac/managebac              # owner/repo format
 ```
 
 When running without `--team`, each pipeline auto-discovers all teams that have its config section.
@@ -112,6 +116,34 @@ npm run etl -- jira-bugs --team MB --since 2026-01-01
 | `severityFieldName` | Yes | JIRA field name for the Severity dropdown (resolved to field ID at runtime) |
 
 **Summary output:** total bugs and median time-to-resolve per severity — per team per month, per team total, cross-team per month, and cross-team total. Severity values are the first two characters of the JIRA field value (e.g., `S1`, `S2`).
+
+### GitHub PRs
+
+Extracts closed/merged pull requests from GitHub repositories and computes PR statistics. Produces per-team and cross-team summaries broken down by month, quarter, and overall totals.
+
+```bash
+# All configured teams
+npm run etl -- github-prs --since 2026-01-01
+
+# Single team with date range
+npm run etl -- github-prs --team MB --since 2026-01-01 --until 2026-03-31
+```
+
+**Options:**
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `-t, --team <key>` | No | all configured | Team key (as in config.yaml) |
+| `-s, --since <date>` | No | `2026-02-09` | Start date for closed PRs (YYYY-MM-DD) |
+| `-u, --until <date>` | No | — | End date for closed PRs (YYYY-MM-DD) |
+
+**Config options:**
+
+| Key | Required | Description |
+|---|---|---|
+| `repos` | Yes | List of GitHub repositories in `owner/repo` format |
+
+**Summary output:** PR count, average and median time-to-close (days), PRs per contributor — per team per month, per team per quarter, per team total, cross-team per month, cross-team per quarter, and cross-team total.
 
 ### Output
 
