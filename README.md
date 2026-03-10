@@ -32,6 +32,8 @@ This will confirm your JIRA connection and display the authenticated user. Fix a
 | `JIRA_EMAIL` | Yes | Email associated with your Atlassian account |
 | `JIRA_API_TOKEN` | Yes | JIRA Cloud API token ([generate one here](https://id.atlassian.com/manage-profile/security/api-tokens)) |
 | `GITHUB_TOKEN` | Yes (for `github-prs`) | GitHub personal access token with `repo` scope ([generate one here](https://github.com/settings/tokens)) |
+| `NEWRELIC_API_KEY` | Yes (for `newrelic-sla`) | New Relic User API key ([generate one here](https://one.newrelic.com/api-keys)) |
+| `NEWRELIC_ACCOUNT_ID` | Yes (for `newrelic-sla`) | New Relic account ID |
 
 ### Team Configuration (`config.yaml`)
 
@@ -51,7 +53,10 @@ MB:
       AND labels = jira_escalated
   github-prs:
     repos:
-      - managebac/managebac              # owner/repo format
+      - eduvo/managebac              # owner/repo format
+  newrelic-sla:
+    apps:
+      - ManageBac Canada                  # New Relic application name
 ```
 
 When running without `--team`, each pipeline auto-discovers all teams that have its config section.
@@ -144,6 +149,34 @@ npm run etl -- github-prs --team MB --since 2026-01-01 --until 2026-03-31
 | `repos` | Yes | List of GitHub repositories in `owner/repo` format |
 
 **Summary output:** PR count, average and median time-to-close (days), PRs per contributor — per team per month, per team per quarter, per team total, cross-team per month, cross-team per quarter, and cross-team total.
+
+### New Relic SLA
+
+Extracts APM SLA metrics (Apdex, satisfied %, error rate %, response time, throughput) from the New Relic REST API v2 and browser error rates from NerdGraph (NRQL). SLA data is fetched per calendar month within the date range; browser errors cover the last 7 days only.
+
+```bash
+# All configured teams
+npm run etl -- newrelic-sla --since 2026-01-01
+
+# Single team with date range
+npm run etl -- newrelic-sla --team MB --since 2026-01-01 --until 2026-03-01
+```
+
+**Options:**
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `-t, --team <key>` | No | all configured | Team key (as in config.yaml) |
+| `-s, --since <date>` | No | `2026-02-09` | Start date (YYYY-MM-DD) |
+| `-u, --until <date>` | No | — | End date (YYYY-MM-DD) |
+
+**Config options:**
+
+| Key | Required | Description |
+|---|---|---|
+| `apps` | Yes | List of New Relic application names to fetch metrics for |
+
+**Summary output:** Per team per month: Apdex, satisfied %, error rate %, response time (ms), throughput (rpm) for each app. Per team average across the full time window. Cross-team average error rate %. Browser error rate per app (last 7 days only).
 
 ### Output
 
