@@ -21,6 +21,9 @@ MB:
       - ManageBac China
       - ManageBac Usa
       - ManageBac Us2
+      - Portal Canada (UAT)
+      - Portal China (PROD)
+      - Portal USA (Production)
 
 MB Mobile:
   jira-cycle-time:
@@ -45,7 +48,11 @@ OpenApply:
     severityFieldName: "Severity"
     customerBugsFilter: >-
       project = OpenApply AND type = Bug AND labels = jira_escalated  AND resolution in (Done, Unresolved)
-
+  newrelic-sla:
+    apps:
+      - OpenApply CA (Production)
+      - OpenApply CN (Production)
+      - OpenApply EU (Production)
 
 SchoolsBuddy:
   jira-cycle-time:
@@ -58,7 +65,10 @@ SchoolsBuddy:
       project = SchoolsBuddy AND reporter NOT IN (60045bb1e2a1350069502b60, 712020:36171044-223d-4e9a-a1de-6a9bec3a194b, 712020:e8de2168-7f3d-4fb0-9f21-0631fa179024,60f3a823ff85e50071154fb7,5e28405463cc180e63b4e9b3,62ef80d9f15eecaf500f27f7,63d724af614cb4ba53fdad79,712020:bee1a77d-817b-4a63-a814-61a687cc506e,712020:d509a0a4-e453-4fc6-b2c9-c6c255e827ac,712020:f895d676-9e05-414a-b08d-55d232a9c002,712020:d638ba06-c68b-4a87-b089-e8a3ba3bcbd2,712020:fc7a877d-c2f4-471f-ad62-daebb2c1b5ae,63fd65a081de11a1adf93010, 63fd669681de11a1adf93040,6177ab33f6da6a006af80d06,62027b05733407006754355b,5c8f5ece583f592c63c73c0d,625633e90630bd007075d1ad,5e2841ce76f1a50e68c925b7,5e15c0f45361330daaeb3311,5e8434d2db49780c1497d14b,5eb9264e021ae30ba8532f56,5eb9264e833be70b7e232f58,5e78a8a27276650c2d44741b,61ed18695a0988006b0f09b7) AND issuetype in (Bug) AND status != "Cancelled/Deferred" 
   newrelic-sla:
     apps:
-      - SchoolsBuddy Production
+      - SchoolsBuddy (Asia)
+      - SchoolsBuddy (China)
+      - SchoolsBuddy (EU)
+      - SchoolsBuddy (US)
 
 Atlas-Portland:
   jira-cycle-time:

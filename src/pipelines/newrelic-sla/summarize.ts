@@ -42,7 +42,7 @@ export interface ErrorsSummary {
 
 function average(values: number[]): number | null {
   if (values.length === 0) return null;
-  return parseFloat((values.reduce((s, v) => s + v, 0) / values.length).toFixed(4));
+  return parseFloat((values.reduce((s, v) => s + v, 0) / values.length).toFixed(2));
 }
 
 function getQuarter(yearMonth: string): string {
@@ -80,36 +80,62 @@ function computeSlaStats(records: NewRelicRecord[]): SlaStats {
 
   const appStats: SlaStats["byApp"] = {};
   const allApdex: number[] = [];
-  const allSatisfied: number[] = [];
-  const allError: number[] = [];
   const allResponse: number[] = [];
   const allThroughput: number[] = [];
+  const satisfiedWeighted: { satisfied: number; throughput: number }[] = [];
+  const errorWeighted: { error: number; throughput: number }[] = [];
 
   for (const [app, recs] of Object.entries(byApp)) {
     const apdexVals = recs.map((r) => r.apdex).filter((v): v is number => v !== undefined);
-    const satisfiedVals = recs.map((r) => r.satisfiedPercent).filter((v): v is number => v !== undefined);
-    const errorVals = recs.map((r) => r.errorRatePercent);
     const responseVals = recs.map((r) => r.responseTimeMs).filter((v): v is number => v !== undefined);
     const throughputVals = recs.map((r) => r.throughputRpm).filter((v): v is number => v !== undefined);
 
+    const appSatWeighted: { value: number; throughput: number }[] = [];
+    const appErrWeighted: { value: number; throughput: number }[] = [];
+    for (const r of recs) {
+      const tp = r.throughputRpm;
+      if (tp !== undefined) {
+        if (r.satisfiedPercent !== undefined) appSatWeighted.push({ value: r.satisfiedPercent, throughput: tp });
+        appErrWeighted.push({ value: r.errorRatePercent, throughput: tp });
+      }
+    }
+
     const a = average(apdexVals);
-    const sat = average(satisfiedVals);
-    const e = average(errorVals);
     const rt = average(responseVals);
     const tp = average(throughputVals);
 
+    const appTpSat = appSatWeighted.reduce((s, v) => s + v.throughput, 0);
+    const sat = appTpSat > 0
+      ? parseFloat((appSatWeighted.reduce((s, v) => s + v.value * v.throughput, 0) / appTpSat).toFixed(2))
+      : null;
+
+    const appTpErr = appErrWeighted.reduce((s, v) => s + v.throughput, 0);
+    const e = appTpErr > 0
+      ? parseFloat((appErrWeighted.reduce((s, v) => s + v.value * v.throughput, 0) / appTpErr).toFixed(2))
+      : null;
+
     appStats[app] = { apdex: a, satisfiedPercent: sat, errorRatePercent: e, responseTimeMs: rt, throughputRpm: tp };
     if (a !== null) allApdex.push(a);
-    if (sat !== null) allSatisfied.push(sat);
-    if (e !== null) allError.push(e);
+    if (sat !== null && tp !== null) satisfiedWeighted.push({ satisfied: sat, throughput: tp });
+    if (e !== null && tp !== null) errorWeighted.push({ error: e, throughput: tp });
     if (rt !== null) allResponse.push(rt);
     if (tp !== null) allThroughput.push(tp);
   }
 
+  const totalThroughputSat = satisfiedWeighted.reduce((s, v) => s + v.throughput, 0);
+  const weightedSatisfied = totalThroughputSat > 0
+    ? parseFloat((satisfiedWeighted.reduce((s, v) => s + v.satisfied * v.throughput, 0) / totalThroughputSat).toFixed(2))
+    : null;
+
+  const totalThroughputErr = errorWeighted.reduce((s, v) => s + v.throughput, 0);
+  const weightedError = totalThroughputErr > 0
+    ? parseFloat((errorWeighted.reduce((s, v) => s + v.error * v.throughput, 0) / totalThroughputErr).toFixed(2))
+    : null;
+
   return {
     averageApdex: average(allApdex),
-    averageSatisfiedPercent: average(allSatisfied),
-    averageErrorRatePercent: average(allError),
+    averageSatisfiedPercent: weightedSatisfied,
+    averageErrorRatePercent: weightedError,
     averageResponseTimeMs: average(allResponse),
     averageThroughputRpm: average(allThroughput),
     byApp: appStats,

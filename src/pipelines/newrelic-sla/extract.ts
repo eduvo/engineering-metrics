@@ -89,9 +89,9 @@ export async function extractNewRelicErrors(
         appName,
         month: range.month,
         dataType: "apm-sla",
-        apdex: parseFloat(apdex.toFixed(4)),
+        apdex: parseFloat(apdex.toFixed(2)),
         satisfiedPercent: parseFloat(satisfiedPercent.toFixed(2)),
-        errorRatePercent: parseFloat(errorRatePercent.toFixed(4)),
+        errorRatePercent: parseFloat(errorRatePercent.toFixed(2)),
         responseTimeMs: parseFloat(responseTimeMs.toFixed(2)),
         throughputRpm: parseFloat(throughputRpm.toFixed(2)),
       });

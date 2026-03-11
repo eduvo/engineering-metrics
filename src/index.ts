@@ -350,7 +350,8 @@ program
       }
     }
     console.log(`\n  Cross-team:`);
-    console.log(`    SLA avg error rate: ${summary.crossTeam.apmSla.total.averageErrorRatePercent ?? "N/A"}%`);
+    console.log(`    Weighted Average error rate: ${summary.crossTeam.apmSla.total.averageErrorRatePercent ?? "N/A"}%`);
+    console.log(`    Weighted Average satisfied: ${summary.crossTeam.apmSla.total.averageSatisfiedPercent ?? "N/A"}%`);
     console.log(`\nOutput:      ${outputPath}`);
   });
 
