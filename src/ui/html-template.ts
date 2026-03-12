@@ -261,11 +261,11 @@ export function generateHTML(data: DataFiles, generatedAt: string, dateRange?: {
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('overview')">Overview</button>
+  <button class="tab active" onclick="switchTab('overall')">Overall</button>
   ${teams.map((t) => `<button class="tab" onclick="switchTab('team-${escapeAttr(t)}')">${escapeHtml(t)}</button>`).join("\n  ")}
 </div>
 
-<div id="tab-overview" class="tab-content active">
+<div id="tab-overall" class="tab-content active">
   ${renderOverview(cycleTime, bugs, prs, sla)}
 </div>
 
