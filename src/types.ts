@@ -11,6 +11,7 @@ export interface MetricRecord {
   issueType: string;
   assignee: string | null;
   cycleTimeDays: number;
+  leadTimeDays: number | null;
   startDate: string;
   endDate: string;
   startStatus: string;

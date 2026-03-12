@@ -308,6 +308,14 @@ function renderOverview(cycleTime: any, bugs: any, prs: any, sla: any): string {
         { label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" },
       ]
     ));
+    sections.push(renderWeeklyTrendChart(
+      "Weekly Lead Time Trend (Cross-Team)", "&#128197;",
+      cycleTime.summary.crossTeam.weekly,
+      [
+        { label: "Median (days)", extract: (s: any) => s.medianLeadTimeDays, color: "#34d399" },
+        { label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" },
+      ]
+    ));
   }
 
   if (prs?.summary?.crossTeam?.weekly) {
@@ -340,6 +348,15 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
       <div style="margin-top:12px" class="metric-row">
         <span class="label">Average</span>
         <span class="value">${fmt(ct.averageCycleTimeDays)} days</span>
+      </div>
+    </div>`);
+    cards.push(`<div class="card">
+      <h3>&#128197; Lead Time</h3>
+      <div class="metric-value">${fmt(ct.medianLeadTimeDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
+      <div class="metric-label">Median lead time (creation → resolution)</div>
+      <div style="margin-top:12px" class="metric-row">
+        <span class="label">Average</span>
+        <span class="value">${fmt(ct.averageLeadTimeDays)} days</span>
       </div>
     </div>`);
   }
@@ -553,6 +570,15 @@ function renderTeamKPIs(team: string, cycleTime: any, bugs: any, prs: any, sla: 
         <span class="value">${fmt(ct.averageCycleTimeDays)} days</span>
       </div>
     </div>`);
+    cards.push(`<div class="card">
+      <h3>&#128197; Lead Time</h3>
+      <div class="metric-value">${fmt(ct.medianLeadTimeDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
+      <div class="metric-label">Median lead time (creation → resolution)</div>
+      <div style="margin-top:12px" class="metric-row">
+        <span class="label">Average</span>
+        <span class="value">${fmt(ct.averageLeadTimeDays)} days</span>
+      </div>
+    </div>`);
   }
 
   const prsTeam = prs?.summary?.teams?.[team];
@@ -649,9 +675,17 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
           <div class="mini-stat"><div class="val">${fmt(ctTeam.total.averageCycleTimeDays)}</div><div class="lbl">Average (days)</div></div>
         </div>
       </div>`);
+      cards.push(`<div class="card">
+        <h3>Overall Lead Time</h3>
+        <div class="mini-grid">
+          <div class="mini-stat"><div class="val">${ctTeam.total.ticketCount}</div><div class="lbl">Tickets</div></div>
+          <div class="mini-stat"><div class="val">${fmt(ctTeam.total.medianLeadTimeDays)}</div><div class="lbl">Median (days)</div></div>
+          <div class="mini-stat"><div class="val">${fmt(ctTeam.total.averageLeadTimeDays)}</div><div class="lbl">Average (days)</div></div>
+        </div>
+      </div>`);
     }
     sections.push(`<div class="section">
-      <div class="section-title"><span class="icon">&#9201;</span> Cycle Time</div>
+      <div class="section-title"><span class="icon">&#9201;</span> Cycle Time & Lead Time</div>
       <div class="grid">${cards.join("")}</div>
     </div>`);
     if (ctTeam.weekly) {
@@ -660,6 +694,13 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
         [
           { label: "Median (days)", extract: (s: any) => s.medianCycleTimeDays, color: "#6c8aff" },
           { label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" },
+        ]
+      ));
+      sections.push(renderWeeklyTrendChart(
+        `Weekly Lead Time \u2014 ${team}`, "&#128197;", ctTeam.weekly,
+        [
+          { label: "Median (days)", extract: (s: any) => s.medianLeadTimeDays, color: "#34d399" },
+          { label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" },
         ]
       ));
     }

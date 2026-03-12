@@ -20,6 +20,15 @@ export function computeCycleTime(
     const diffMs = endDate.getTime() - startDate.getTime();
     const cycleTimeDays = parseFloat((diffMs / (1000 * 60 * 60 * 24)).toFixed(2));
 
+    let leadTimeDays: number | null = null;
+    if (issue.fields.created && issue.fields.resolutiondate) {
+      const createdMs = new Date(issue.fields.created).getTime();
+      const resolvedMs = new Date(issue.fields.resolutiondate).getTime();
+      if (resolvedMs > createdMs) {
+        leadTimeDays = parseFloat(((resolvedMs - createdMs) / (1000 * 60 * 60 * 24)).toFixed(2));
+      }
+    }
+
     records.push({
       issueKey: issue.key,
       summary: issue.fields.summary,
@@ -27,6 +36,7 @@ export function computeCycleTime(
       issueType: issue.fields.issuetype.name,
       assignee: issue.fields.assignee?.displayName ?? null,
       cycleTimeDays,
+      leadTimeDays,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       startStatus,
