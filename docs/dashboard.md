@@ -7,12 +7,17 @@ The dashboard is a self-contained HTML file generated from the latest ETL data. 
 ## Usage
 
 ```bash
-# Generate on demand from existing data
-npm run report
+# Run all ETL pipelines, then generate the dashboard
+npm run report -- --team MB --since 2026-01-01
+
+# Skip ETL and generate the dashboard from existing data files
+npm run report -- --skip-etl
 
 # Automatically generated after running all pipelines
 npm run etl -- all --since 2026-01-01
 ```
+
+The `--skip-etl` flag is useful when you want to regenerate or tweak the dashboard without re-fetching data from external APIs.
 
 Reports are saved to `reports/dashboard-<timestamp>.html`.
 

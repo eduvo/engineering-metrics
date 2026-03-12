@@ -435,8 +435,13 @@ program
   .option("-t, --team <key>", "Team key. If omitted, runs for all configured teams.")
   .option("-s, --since <date>", "Start date (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date (YYYY-MM-DD)")
-  .action(async (opts: ETLOptions) => {
-    await runAllPipelines(opts);
+  .option("--skip-etl", "Skip running ETL pipelines and generate the report from the latest existing data files")
+  .action(async (opts: ETLOptions & { skipEtl?: boolean }) => {
+    if (!opts.skipEtl) {
+      await runAllPipelines(opts);
+    } else {
+      console.log("Skipping ETL pipelines (--skip-etl). Using latest data files.");
+    }
 
     // Generate dashboard report
     try {

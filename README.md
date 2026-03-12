@@ -205,8 +205,21 @@ After all pipelines complete, the `all` command automatically generates an HTML 
 Generates a self-contained HTML dashboard from the latest ETL data files. The report is produced automatically after `npm run etl -- all`, or can be generated on demand:
 
 ```bash
-npm run report
+# Run all ETL pipelines, then generate the dashboard
+npm run report -- --team MB --since 2026-01-01
+
+# Skip ETL and generate the dashboard from existing data files
+npm run report -- --skip-etl
 ```
+
+**Options:**
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `-t, --team <key>` | No | all configured | Team key (as in config.yaml) |
+| `-s, --since <date>` | No | `2026-02-09` | Start date (YYYY-MM-DD) |
+| `-u, --until <date>` | No | — | End date (YYYY-MM-DD) |
+| `--skip-etl` | No | — | Skip running ETL pipelines and use the latest existing data files |
 
 The dashboard includes:
 

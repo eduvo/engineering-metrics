@@ -301,20 +301,24 @@ function renderOverview(cycleTime: any, bugs: any, prs: any, sla: any): string {
 
   if (cycleTime?.summary?.crossTeam?.weekly) {
     sections.push(renderWeeklyTrendChart(
-      "Weekly Cycle Time Trend (Cross-Team)", "&#9201;",
+      "Weekly Cycle Time — Median (Cross-Team)", "&#9201;",
       cycleTime.summary.crossTeam.weekly,
-      [
-        { label: "Median (days)", extract: (s: any) => s.medianCycleTimeDays, color: "#6c8aff" },
-        { label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" },
-      ]
+      [{ label: "Median (days)", extract: (s: any) => s.medianCycleTimeDays, color: "#6c8aff" }]
     ));
     sections.push(renderWeeklyTrendChart(
-      "Weekly Lead Time Trend (Cross-Team)", "&#128197;",
+      "Weekly Cycle Time — Average (Cross-Team)", "&#9201;",
       cycleTime.summary.crossTeam.weekly,
-      [
-        { label: "Median (days)", extract: (s: any) => s.medianLeadTimeDays, color: "#34d399" },
-        { label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" },
-      ]
+      [{ label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" }]
+    ));
+    sections.push(renderWeeklyTrendChart(
+      "Weekly Lead Time — Median (Cross-Team)", "&#128197;",
+      cycleTime.summary.crossTeam.weekly,
+      [{ label: "Median (days)", extract: (s: any) => s.medianLeadTimeDays, color: "#34d399" }]
+    ));
+    sections.push(renderWeeklyTrendChart(
+      "Weekly Lead Time — Average (Cross-Team)", "&#128197;",
+      cycleTime.summary.crossTeam.weekly,
+      [{ label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" }]
     ));
   }
 
@@ -514,14 +518,34 @@ function renderBugsWeeklyChart(title: string, weekly: Record<string, any>): stri
   }
   const severities = Array.from(allSeverities).sort();
   const colors = ["#6c8aff", "#34d399", "#fbbf24", "#f87171", "#a78bfa", "#fb923c"];
+  const medianColors = ["#6c8aff", "#34d399", "#fbbf24", "#f87171", "#a78bfa", "#fb923c"];
+  const avgColors = ["#3b5de7", "#1fa67a", "#d9a00a", "#dc2626", "#7c5bbf", "#e07616"];
 
-  return renderWeeklyTrendChart(title, "&#128027;", weekly,
+  const countChart = renderWeeklyTrendChart(`${title} — Count`, "&#128027;", weekly,
     severities.map((sev, i) => ({
       label: sev,
       extract: (stats: any) => stats[sev]?.totalBugs ?? null,
       color: colors[i % colors.length],
     }))
   );
+
+  const resolveLines: { label: string; extract: (stats: any) => number | null; color: string }[] = [];
+  severities.forEach((sev, i) => {
+    resolveLines.push({
+      label: `${sev} median`,
+      extract: (stats: any) => stats[sev]?.medianTimeToResolveDays ?? null,
+      color: medianColors[i % medianColors.length],
+    });
+    resolveLines.push({
+      label: `${sev} avg`,
+      extract: (stats: any) => stats[sev]?.averageTimeToResolveDays ?? null,
+      color: avgColors[i % avgColors.length],
+    });
+  });
+
+  const resolveChart = renderWeeklyTrendChart(`${title} — Time to Resolve (days)`, "&#9201;", weekly, resolveLines);
+
+  return [countChart, resolveChart].filter(Boolean).join("\n");
 }
 
 function renderSLATrendSection(title: string, monthly: Record<string, any>): string {
@@ -682,18 +706,20 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
     </div>`);
     if (ctTeam.weekly) {
       sections.push(renderWeeklyTrendChart(
-        `Weekly Cycle Time \u2014 ${team}`, "&#9201;", ctTeam.weekly,
-        [
-          { label: "Median (days)", extract: (s: any) => s.medianCycleTimeDays, color: "#6c8aff" },
-          { label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" },
-        ]
+        `Weekly Cycle Time — Median \u2014 ${team}`, "&#9201;", ctTeam.weekly,
+        [{ label: "Median (days)", extract: (s: any) => s.medianCycleTimeDays, color: "#6c8aff" }]
       ));
       sections.push(renderWeeklyTrendChart(
-        `Weekly Lead Time \u2014 ${team}`, "&#128197;", ctTeam.weekly,
-        [
-          { label: "Median (days)", extract: (s: any) => s.medianLeadTimeDays, color: "#34d399" },
-          { label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" },
-        ]
+        `Weekly Cycle Time — Average \u2014 ${team}`, "&#9201;", ctTeam.weekly,
+        [{ label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" }]
+      ));
+      sections.push(renderWeeklyTrendChart(
+        `Weekly Lead Time — Median \u2014 ${team}`, "&#128197;", ctTeam.weekly,
+        [{ label: "Median (days)", extract: (s: any) => s.medianLeadTimeDays, color: "#34d399" }]
+      ));
+      sections.push(renderWeeklyTrendChart(
+        `Weekly Lead Time — Average \u2014 ${team}`, "&#128197;", ctTeam.weekly,
+        [{ label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" }]
       ));
     }
   }
