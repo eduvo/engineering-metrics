@@ -216,17 +216,17 @@ async function runJiraBugs(opts: ETLOptions) {
     for (const [teamKey, teamSummary] of Object.entries(summary.teams)) {
       console.log(`\n  ${teamKey}:`);
       for (const [sev, stats] of Object.entries(teamSummary.total)) {
-        console.log(`    ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days`);
+        console.log(`    ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days, avg TTR: ${stats.averageTimeToResolveDays ?? "N/A"} days`);
       }
     }
     console.log(`\n  Cross-team:`);
     for (const [sev, stats] of Object.entries(summary.crossTeam.total)) {
-      console.log(`    ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days`);
+      console.log(`    ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days, avg TTR: ${stats.averageTimeToResolveDays ?? "N/A"} days`);
     }
     for (const [month, sevStats] of Object.entries(summary.crossTeam.monthly).sort(([a], [b]) => a.localeCompare(b))) {
       console.log(`    ${month}:`);
       for (const [sev, stats] of Object.entries(sevStats)) {
-        console.log(`      ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days`);
+        console.log(`      ${sev}: ${stats.totalBugs} bugs, median TTR: ${stats.medianTimeToResolveDays ?? "N/A"} days, avg TTR: ${stats.averageTimeToResolveDays ?? "N/A"} days`);
       }
     }
     console.log(`\nOutput:      ${outputPath}`);

@@ -3,6 +3,7 @@ import { BugRecord } from "../../types.js";
 export interface SeverityStats {
   totalBugs: number;
   medianTimeToResolveDays: number | null;
+  averageTimeToResolveDays: number | null;
 }
 
 export interface TeamBugsSummary {
@@ -41,9 +42,13 @@ function computeSeverityStats(records: BugRecord[]): Record<string, SeverityStat
     const resolveTimes = recs
       .map((r) => r.timeToResolveDays)
       .filter((d): d is number => d !== null);
+    const avg = resolveTimes.length > 0
+      ? parseFloat((resolveTimes.reduce((a, b) => a + b, 0) / resolveTimes.length).toFixed(2))
+      : null;
     result[sev] = {
       totalBugs: recs.length,
       medianTimeToResolveDays: median(resolveTimes),
+      averageTimeToResolveDays: avg,
     };
   }
   return result;
