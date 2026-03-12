@@ -1,4 +1,5 @@
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
+import { exec } from "node:child_process";
 import path from "node:path";
 import { generateHTML, DataFiles } from "./html-template.js";
 
@@ -72,6 +73,10 @@ export async function generateReport(): Promise<string> {
 
   await writeFile(filePath, html, "utf-8");
   console.log(`[report] Dashboard generated -> ${filePath}`);
+
+  // Open in default browser
+  const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+  exec(`${cmd} "${filePath}"`);
 
   return filePath;
 }
