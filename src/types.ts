@@ -10,10 +10,10 @@ export interface MetricRecord {
   description: string | null;
   issueType: string;
   assignee: string | null;
-  cycleTimeDays: number;
+  cycleTimeDays: number | null;
   leadTimeDays: number | null;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   startStatus: string;
   endStatus: string;
   statusTransitions: StatusTransition[];

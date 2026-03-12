@@ -14,11 +14,11 @@ export function computeCycleTime(
     const startDate = findFirstTransitionTo(issue, startUpper);
     const endDate = findFirstTransitionTo(issue, endUpper);
 
-    if (!startDate || !endDate) continue;
-    if (endDate <= startDate) continue;
-
-    const diffMs = endDate.getTime() - startDate.getTime();
-    const cycleTimeDays = parseFloat((diffMs / (1000 * 60 * 60 * 24)).toFixed(2));
+    let cycleTimeDays: number | null = null;
+    if (startDate && endDate && endDate > startDate) {
+      const diffMs = endDate.getTime() - startDate.getTime();
+      cycleTimeDays = parseFloat((diffMs / (1000 * 60 * 60 * 24)).toFixed(2));
+    }
 
     let leadTimeDays: number | null = null;
     if (issue.fields.created && issue.fields.resolutiondate) {
@@ -29,6 +29,8 @@ export function computeCycleTime(
       }
     }
 
+    if (cycleTimeDays === null && leadTimeDays === null) continue;
+
     records.push({
       issueKey: issue.key,
       summary: issue.fields.summary,
@@ -37,8 +39,8 @@ export function computeCycleTime(
       assignee: issue.fields.assignee?.displayName ?? null,
       cycleTimeDays,
       leadTimeDays,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: startDate?.toISOString() ?? null,
+      endDate: endDate?.toISOString() ?? null,
       startStatus,
       endStatus,
       statusTransitions: extractStatusTransitions(issue),

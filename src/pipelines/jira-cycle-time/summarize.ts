@@ -40,19 +40,19 @@ function average(values: number[]): number | null {
 }
 
 function computeStats(records: MetricRecord[]): CycleTimeStats {
-  const times = records.map((r) => r.cycleTimeDays);
+  const cycleTimes = records.map((r) => r.cycleTimeDays).filter((v): v is number => v !== null);
   const leadTimes = records.map((r) => r.leadTimeDays).filter((v): v is number => v !== null);
   return {
     ticketCount: records.length,
-    averageCycleTimeDays: average(times),
-    medianCycleTimeDays: median(times),
+    averageCycleTimeDays: average(cycleTimes),
+    medianCycleTimeDays: median(cycleTimes),
     averageLeadTimeDays: average(leadTimes),
     medianLeadTimeDays: median(leadTimes),
   };
 }
 
 function getResolvedMonth(record: MetricRecord): string {
-  return (record.resolvedDate ?? record.endDate).substring(0, 7);
+  return (record.resolvedDate ?? record.endDate ?? record.createdDate).substring(0, 7);
 }
 
 function getQuarter(yearMonth: string): string {
@@ -95,7 +95,7 @@ function getISOWeek(dateStr: string): string {
 function groupByWeek(records: MetricRecord[]): Record<string, MetricRecord[]> {
   const groups: Record<string, MetricRecord[]> = {};
   for (const r of records) {
-    const week = getISOWeek(r.resolvedDate ?? r.endDate);
+    const week = getISOWeek(r.resolvedDate ?? r.endDate ?? r.createdDate);
     if (!groups[week]) groups[week] = [];
     groups[week].push(r);
   }
