@@ -6,6 +6,8 @@ import { GitHubPRsPipeline, summarizeAll as summarizeAllPRs } from "./pipelines/
 import { NewRelicErrorsPipeline, summarizeAll as summarizeAllErrors } from "./pipelines/newrelic-sla/index.js";
 import { saveJson } from "./loaders/json-loader.js";
 
+type ETLOptions = { team?: string; since: string; until?: string };
+
 const program = new Command();
 
 program
@@ -19,7 +21,9 @@ program
   .option("-t, --team <key>", "Team key (JIRA project key, e.g., MYPROJ). If omitted, runs for all configured teams.")
   .option("-s, --since <date>", "Start date for resolved issues (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date for resolved issues (YYYY-MM-DD)")
-  .action(async (opts: { team?: string; since: string; until?: string }) => {
+  .action(runJiraCycleTime);
+
+async function runJiraCycleTime(opts: ETLOptions) {
     const config = loadJiraConfig();
     const allTeams = loadAllTeamConfigs();
     const teamKeys = opts.team
@@ -99,7 +103,7 @@ program
       console.log(`      ${quarter}: ${stats.ticketCount} tickets, avg ${stats.averageCycleTimeDays ?? "N/A"} days, median ${stats.medianCycleTimeDays ?? "N/A"} days`);
     }
     console.log(`\nOutput:      ${outputPath}`);
-  });
+}
 
 program
   .command("jira-bugs")
@@ -107,7 +111,9 @@ program
   .option("-t, --team <key>", "Team key (JIRA project key, e.g., MYPROJ). If omitted, runs for all configured teams.")
   .option("-s, --since <date>", "Start date for created issues (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date for created issues (YYYY-MM-DD)")
-  .action(async (opts: { team?: string; since: string; until?: string }) => {
+  .action(runJiraBugs);
+
+async function runJiraBugs(opts: ETLOptions) {
     const config = loadJiraConfig();
     const allTeams = loadAllTeamConfigs();
     const teamKeys = opts.team
@@ -182,7 +188,7 @@ program
       }
     }
     console.log(`\nOutput:      ${outputPath}`);
-  });
+}
 
 program
   .command("github-prs")
@@ -190,7 +196,9 @@ program
   .option("-t, --team <key>", "Team key (as in config.yaml). If omitted, runs for all configured teams.")
   .option("-s, --since <date>", "Start date for closed PRs (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date for closed PRs (YYYY-MM-DD)")
-  .action(async (opts: { team?: string; since: string; until?: string }) => {
+  .action(runGitHubPRs);
+
+async function runGitHubPRs(opts: ETLOptions) {
     const githubConfig = loadGitHubConfig();
     const allTeams = loadAllTeamConfigs();
     const teamKeys = opts.team
@@ -269,7 +277,7 @@ program
       console.log(`      ${quarter}: ${stats.prCount} PRs, avg close ${stats.averageTimeToCloseDays ?? "N/A"} days, median close ${stats.medianTimeToCloseDays ?? "N/A"} days`);
     }
     console.log(`\nOutput:      ${outputPath}`);
-  });
+}
 
 program
   .command("newrelic-sla")
@@ -277,7 +285,9 @@ program
   .option("-t, --team <key>", "Team key (as in config.yaml). If omitted, runs for all configured teams.")
   .option("-s, --since <date>", "Start date (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date (YYYY-MM-DD)")
-  .action(async (opts: { team?: string; since: string; until?: string }) => {
+  .action(runNewRelicSla);
+
+async function runNewRelicSla(opts: ETLOptions) {
     const nrConfig = loadNewRelicConfig();
     const allTeams = loadAllTeamConfigs();
     const teamKeys = opts.team
@@ -353,6 +363,53 @@ program
     console.log(`    Weighted Average error rate: ${summary.crossTeam.apmSla.total.averageErrorRatePercent ?? "N/A"}%`);
     console.log(`    Weighted Average satisfied: ${summary.crossTeam.apmSla.total.averageSatisfiedPercent ?? "N/A"}%`);
     console.log(`\nOutput:      ${outputPath}`);
+}
+
+program
+  .command("all")
+  .description("Run all ETL pipelines sequentially")
+  .option("-t, --team <key>", "Team key. If omitted, runs for all configured teams.")
+  .option("-s, --since <date>", "Start date (YYYY-MM-DD)", "2026-02-09")
+  .option("-u, --until <date>", "End date (YYYY-MM-DD)")
+  .action(async (opts: ETLOptions) => {
+    const pipelines = [
+      { name: "jira-cycle-time", run: runJiraCycleTime },
+      { name: "jira-bugs", run: runJiraBugs },
+      { name: "github-prs", run: runGitHubPRs },
+      { name: "newrelic-sla", run: runNewRelicSla },
+    ];
+
+    const results: { name: string; status: "success" | "failed"; error?: string }[] = [];
+
+    for (const pipeline of pipelines) {
+      try {
+        console.log(`\n${"=".repeat(60)}`);
+        console.log(`Running ${pipeline.name}...`);
+        console.log("=".repeat(60));
+        await pipeline.run(opts);
+        results.push({ name: pipeline.name, status: "success" });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`\n[${pipeline.name}] FAILED: ${message}`);
+        results.push({ name: pipeline.name, status: "failed", error: message });
+      }
+    }
+
+    console.log(`\n${"=".repeat(60)}`);
+    console.log("All Pipelines \u2014 Summary");
+    console.log("=".repeat(60));
+    for (const r of results) {
+      const icon = r.status === "success" ? "\u2713" : "\u2717";
+      console.log(`  ${icon} ${r.name}: ${r.status}${r.error ? ` (${r.error})` : ""}`);
+    }
+
+    const failed = results.filter((r) => r.status === "failed");
+    if (failed.length > 0) {
+      console.log(`\n${failed.length} pipeline(s) failed.`);
+      process.exitCode = 1;
+    } else {
+      console.log(`\nAll ${results.length} pipelines completed successfully.`);
+    }
   });
 
 program.parse();

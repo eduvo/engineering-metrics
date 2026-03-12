@@ -83,6 +83,7 @@ Teams only need config sections for the pipelines they use. When running without
 | `jira-bugs` | JIRA API | Bug counts by severity, time-to-resolve | [docs/jira-bugs.md](jira-bugs.md) |
 | `github-prs` | GitHub Search API | PR count, time-to-close, contributors | [docs/github-prs.md](github-prs.md) |
 | `newrelic-errors` | New Relic NerdGraph API | APM error rate %, JS error rate % per app | [docs/newrelic-errors.md](newrelic-errors.md) |
+| `all` | All of the above | Runs all pipelines sequentially with resilient error handling | — |
 
 Each pipeline produces per-team and cross-team summaries bucketed by month and quarter.
 
@@ -115,7 +116,14 @@ Each pipeline produces per-team and cross-team summaries bucketed by month and q
 npm run etl -- <pipeline> [--team <KEY>] [--since YYYY-MM-DD] [--until YYYY-MM-DD]
 ```
 
-Available pipelines: `jira-cycle-time`, `jira-bugs`, `github-prs`, `newrelic-errors`.
+Available pipelines: `jira-cycle-time`, `jira-bugs`, `github-prs`, `newrelic-errors`, `all`.
+
+The `all` command runs every pipeline sequentially. If any pipeline fails, the rest continue and a summary of successes/failures is printed at the end.
+
+```bash
+# Run all pipelines for all teams
+npm run etl -- all --since 2026-01-01
+```
 
 ## Adding a New Pipeline
 

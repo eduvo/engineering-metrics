@@ -178,6 +178,26 @@ npm run etl -- newrelic-sla --team MB --since 2026-01-01 --until 2026-03-01
 
 **Summary output:** Per team per month: Apdex, satisfied %, error rate %, response time (ms), throughput (rpm) for each app. Per team average across the full time window. Cross-team average error rate %. Browser error rate per app (last 7 days only).
 
+### Run All Pipelines
+
+Runs all four ETL pipelines (`jira-cycle-time`, `jira-bugs`, `github-prs`, `newrelic-sla`) sequentially. If any pipeline fails, the rest continue running and a summary of successes/failures is printed at the end.
+
+```bash
+# All configured teams, all pipelines
+npm run etl -- all --since 2026-01-01
+
+# Single team, all pipelines
+npm run etl -- all --team MB --since 2026-01-01 --until 2026-03-31
+```
+
+**Options:**
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `-t, --team <key>` | No | all configured | Team key (as in config.yaml) |
+| `-s, --since <date>` | No | `2026-02-09` | Start date (YYYY-MM-DD) |
+| `-u, --until <date>` | No | — | End date (YYYY-MM-DD) |
+
 ### Output
 
 Results are written as JSON to `data/<pipeline-name>-<timestamp>.json`, containing both `summary` and `records`.
