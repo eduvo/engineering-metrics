@@ -344,7 +344,7 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
     cards.push(`<div class="card">
       <h3>&#9201; Cycle Time</h3>
       <div class="metric-value">${fmt(ct.medianCycleTimeDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
-      <div class="metric-label">Median cycle time (${ct.ticketCount} tickets)</div>
+      <div class="metric-label">Median cycle time (${ct.cycleTimeTicketCount} tickets)</div>
       <div style="margin-top:12px" class="metric-row">
         <span class="label">Average</span>
         <span class="value">${fmt(ct.averageCycleTimeDays)} days</span>
@@ -353,7 +353,7 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
     cards.push(`<div class="card">
       <h3>&#128197; Lead Time</h3>
       <div class="metric-value">${fmt(ct.medianLeadTimeDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
-      <div class="metric-label">Median lead time (creation → resolution)</div>
+      <div class="metric-label">Median lead time (${ct.leadTimeTicketCount} tickets)</div>
       <div style="margin-top:12px" class="metric-row">
         <span class="label">Average</span>
         <span class="value">${fmt(ct.averageLeadTimeDays)} days</span>
@@ -429,13 +429,14 @@ function renderWeeklyTrendChart(
   title: string,
   icon: string,
   weekly: Record<string, any>,
-  lines: { label: string; extract: (stats: any) => number | null; color: string }[]
+  lines: { label: string; extract: (stats: any) => number | null; color: string }[],
+  rightPad = 150
 ): string {
   const weeks = Object.keys(weekly).sort();
   if (weeks.length < 2) return "";
 
   const W = 720, H = 260;
-  const pad = { t: 20, r: 150, b: 55, l: 55 };
+  const pad = { t: 20, r: rightPad, b: 55, l: 55 };
   const pw = W - pad.l - pad.r;
   const ph = H - pad.t - pad.b;
 
@@ -525,34 +526,25 @@ function renderBugsWeeklyChart(title: string, weekly: Record<string, any>): stri
 
 function renderSLATrendSection(title: string, monthly: Record<string, any>): string {
   const months = Object.keys(monthly).sort();
-  if (months.length === 0) return "";
+  if (months.length < 2) return "";
 
-  return `<div class="section">
-    <div class="section-title"><span class="icon">&#128200;</span> ${title}</div>
-    <div class="card">
-      <table>
-        <thead><tr><th>Month</th><th>Apdex</th><th>Satisfied %</th><th>Error Rate %</th><th>Response (ms)</th><th>Throughput (rpm)</th></tr></thead>
-        <tbody>
-          ${months
-            .map(
-              (m) => {
-                const s = monthly[m];
-                const apdexBadge = (s.averageApdex ?? 0) >= 0.95 ? "badge-green" : (s.averageApdex ?? 0) >= 0.85 ? "badge-yellow" : "badge-red";
-                return `<tr>
-                  <td><strong>${escapeHtml(m)}</strong></td>
-                  <td><span class="badge ${apdexBadge}">${fmt(s.averageApdex, 4)}</span></td>
-                  <td>${fmt(s.averageSatisfiedPercent)}%</td>
-                  <td>${fmt(s.averageErrorRatePercent, 3)}%</td>
-                  <td>${fmt(s.averageResponseTimeMs)}ms</td>
-                  <td>${fmt(s.averageThroughputRpm, 0)}</td>
-                </tr>`;
-              }
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  </div>`;
+  return [
+    renderWeeklyTrendChart(`${title} \u2014 Apdex`, "&#128200;", monthly, [
+      { label: "Apdex", extract: (s: any) => s.averageApdex, color: "#34d399" },
+    ]),
+    renderWeeklyTrendChart(`${title} \u2014 Satisfied %`, "&#128200;", monthly, [
+      { label: "Satisfied %", extract: (s: any) => s.averageSatisfiedPercent, color: "#6c8aff" },
+    ]),
+    renderWeeklyTrendChart(`${title} \u2014 Error Rate %`, "&#128200;", monthly, [
+      { label: "Error Rate %", extract: (s: any) => s.averageErrorRatePercent, color: "#f87171" },
+    ]),
+    renderWeeklyTrendChart(`${title} \u2014 Response Time (ms)`, "&#128200;", monthly, [
+      { label: "Response (ms)", extract: (s: any) => s.averageResponseTimeMs, color: "#fbbf24" },
+    ]),
+    renderWeeklyTrendChart(`${title} \u2014 Throughput (rpm)`, "&#128200;", monthly, [
+      { label: "Throughput (rpm)", extract: (s: any) => s.averageThroughputRpm, color: "#a78bfa" },
+    ]),
+  ].filter(Boolean).join("\n");
 }
 
 function renderTeamKPIs(team: string, cycleTime: any, bugs: any, prs: any, sla: any): string {
@@ -564,7 +556,7 @@ function renderTeamKPIs(team: string, cycleTime: any, bugs: any, prs: any, sla: 
     cards.push(`<div class="card">
       <h3>&#9201; Cycle Time</h3>
       <div class="metric-value">${fmt(ct.medianCycleTimeDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
-      <div class="metric-label">Median cycle time (${ct.ticketCount} tickets)</div>
+      <div class="metric-label">Median cycle time (${ct.cycleTimeTicketCount} tickets)</div>
       <div style="margin-top:12px" class="metric-row">
         <span class="label">Average</span>
         <span class="value">${fmt(ct.averageCycleTimeDays)} days</span>
@@ -573,7 +565,7 @@ function renderTeamKPIs(team: string, cycleTime: any, bugs: any, prs: any, sla: 
     cards.push(`<div class="card">
       <h3>&#128197; Lead Time</h3>
       <div class="metric-value">${fmt(ct.medianLeadTimeDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
-      <div class="metric-label">Median lead time (creation → resolution)</div>
+      <div class="metric-label">Median lead time (${ct.leadTimeTicketCount} tickets)</div>
       <div style="margin-top:12px" class="metric-row">
         <span class="label">Average</span>
         <span class="value">${fmt(ct.averageLeadTimeDays)} days</span>
@@ -670,7 +662,7 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
       cards.push(`<div class="card">
         <h3>Overall Cycle Time</h3>
         <div class="mini-grid">
-          <div class="mini-stat"><div class="val">${ctTeam.total.ticketCount}</div><div class="lbl">Tickets</div></div>
+          <div class="mini-stat"><div class="val">${ctTeam.total.cycleTimeTicketCount}</div><div class="lbl">Tickets</div></div>
           <div class="mini-stat"><div class="val">${fmt(ctTeam.total.medianCycleTimeDays)}</div><div class="lbl">Median (days)</div></div>
           <div class="mini-stat"><div class="val">${fmt(ctTeam.total.averageCycleTimeDays)}</div><div class="lbl">Average (days)</div></div>
         </div>
@@ -678,7 +670,7 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
       cards.push(`<div class="card">
         <h3>Overall Lead Time</h3>
         <div class="mini-grid">
-          <div class="mini-stat"><div class="val">${ctTeam.total.ticketCount}</div><div class="lbl">Tickets</div></div>
+          <div class="mini-stat"><div class="val">${ctTeam.total.leadTimeTicketCount}</div><div class="lbl">Tickets</div></div>
           <div class="mini-stat"><div class="val">${fmt(ctTeam.total.medianLeadTimeDays)}</div><div class="lbl">Median (days)</div></div>
           <div class="mini-stat"><div class="val">${fmt(ctTeam.total.averageLeadTimeDays)}</div><div class="lbl">Average (days)</div></div>
         </div>
@@ -838,7 +830,7 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
 
 function renderSLAAppTable(monthly: Record<string, any>): string {
   const months = Object.keys(monthly).sort();
-  if (months.length === 0) return "";
+  if (months.length < 2) return "";
 
   const allApps = new Set<string>();
   for (const m of months) {
@@ -849,34 +841,19 @@ function renderSLAAppTable(monthly: Record<string, any>): string {
   const apps = Array.from(allApps).sort();
   if (apps.length === 0) return "";
 
-  return `<div class="card" style="margin-top:16px">
-    <h3>APM By App &amp; Month</h3>
-    <div style="overflow-x:auto">
-    <table>
-      <thead><tr><th>App</th><th>Month</th><th>Apdex</th><th>Satisfied %</th><th>Error %</th><th>Response (ms)</th><th>Throughput (rpm)</th></tr></thead>
-      <tbody>
-        ${apps
-          .map((app) =>
-            months
-              .map((m, i) => {
-                const s = monthly[m]?.byApp?.[app];
-                if (!s) return "";
-                const apdexBadge = (s.apdex ?? 0) >= 0.95 ? "badge-green" : (s.apdex ?? 0) >= 0.85 ? "badge-yellow" : "badge-red";
-                return `<tr>
-                  ${i === 0 ? `<td rowspan="${months.length}"><strong>${escapeHtml(app)}</strong></td>` : ""}
-                  <td>${escapeHtml(m)}</td>
-                  <td><span class="badge ${apdexBadge}">${fmt(s.apdex, 4)}</span></td>
-                  <td>${fmt(s.satisfiedPercent)}%</td>
-                  <td>${fmt(s.errorRatePercent, 3)}%</td>
-                  <td>${fmt(s.responseTimeMs)}ms</td>
-                  <td>${fmt(s.throughputRpm, 0)}</td>
-                </tr>`;
-              })
-              .join("")
-          )
-          .join("")}
-      </tbody>
-    </table>
-    </div>
-  </div>`;
+  const colors = ["#6c8aff", "#34d399", "#fbbf24", "#f87171", "#a78bfa", "#fb923c", "#22d3ee"];
+  const appLines = (metric: string) =>
+    apps.map((app, i) => ({
+      label: app,
+      extract: (s: any) => s.byApp?.[app]?.[metric] ?? null,
+      color: colors[i % colors.length],
+    }));
+
+  return [
+    renderWeeklyTrendChart("Apdex by App", "&#128200;", monthly, appLines("apdex"), 200),
+    renderWeeklyTrendChart("Satisfied % by App", "&#128200;", monthly, appLines("satisfiedPercent"), 200),
+    renderWeeklyTrendChart("Error Rate % by App", "&#128200;", monthly, appLines("errorRatePercent"), 200),
+    renderWeeklyTrendChart("Response Time by App (ms)", "&#128200;", monthly, appLines("responseTimeMs"), 200),
+    renderWeeklyTrendChart("Throughput by App (rpm)", "&#128200;", monthly, appLines("throughputRpm"), 200),
+  ].filter(Boolean).join("\n");
 }

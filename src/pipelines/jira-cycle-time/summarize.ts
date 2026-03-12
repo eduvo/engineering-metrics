@@ -2,6 +2,8 @@ import { MetricRecord } from "../../types.js";
 
 export interface CycleTimeStats {
   ticketCount: number;
+  cycleTimeTicketCount: number;
+  leadTimeTicketCount: number;
   averageCycleTimeDays: number | null;
   medianCycleTimeDays: number | null;
   averageLeadTimeDays: number | null;
@@ -44,6 +46,8 @@ function computeStats(records: MetricRecord[]): CycleTimeStats {
   const leadTimes = records.map((r) => r.leadTimeDays).filter((v): v is number => v !== null);
   return {
     ticketCount: records.length,
+    cycleTimeTicketCount: cycleTimes.length,
+    leadTimeTicketCount: leadTimes.length,
     averageCycleTimeDays: average(cycleTimes),
     medianCycleTimeDays: median(cycleTimes),
     averageLeadTimeDays: average(leadTimes),
