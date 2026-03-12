@@ -21,6 +21,9 @@ metrics-agent/
 │   │   └── newrelic-api.ts             # NerdGraph (GraphQL) NRQL query client
 │   ├── loaders/
 │   │   └── json-loader.ts             # Writes JSON to data/ directory
+│   ├── ui/
+│   │   ├── generate-report.ts         # Report orchestration (load data, write HTML)
+│   │   └── html-template.ts           # HTML/CSS dashboard rendering
 │   └── pipelines/
 │       ├── base.ts                    # Abstract Pipeline<TRaw, TTransformed>
 │       ├── jira-cycle-time/           # Cycle time between JIRA status transitions
@@ -29,6 +32,7 @@ metrics-agent/
 │       └── newrelic-errors/          # New Relic APM & JS error rates per app
 ├── config.yaml                        # Per-team pipeline configuration
 ├── data/                              # Pipeline output (gitignored)
+├── reports/                           # Generated HTML dashboards (gitignored)
 ├── docs/                              # Pipeline-specific documentation
 ├── .env                               # API credentials (gitignored)
 ├── .env.example                       # Template for required env vars

@@ -6,6 +6,7 @@
     "check-token": "tsx src/check-token.ts",
     "etl": "tsx src/index.ts",
     "etl:all": "tsx src/index.ts all",
+    "report": "tsx src/index.ts report",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

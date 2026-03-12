@@ -70,7 +70,7 @@ SchoolsBuddy:
       - SchoolsBuddy (EU)
       - SchoolsBuddy (US)
 
-Atlas-Portland:
+Atlas:
   jira-cycle-time:
     startStatus: Ready For Development
     endStatus: Closed
