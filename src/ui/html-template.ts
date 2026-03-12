@@ -18,7 +18,7 @@ function escapeAttr(s: string): string {
   return s.replace(/[^a-zA-Z0-9-_]/g, "_");
 }
 
-export function generateHTML(data: DataFiles, generatedAt: string): string {
+export function generateHTML(data: DataFiles, generatedAt: string, dateRange?: { since: string; until: string }): string {
   const cycleTime = data["jira-cycle-time"] as any;
   const bugs = data["jira-bugs"] as any;
   const prs = data["github-prs"] as any;
@@ -257,7 +257,7 @@ export function generateHTML(data: DataFiles, generatedAt: string): string {
 
 <div class="header">
   <h1>Engineering Metrics Dashboard</h1>
-  <div class="subtitle">Generated ${escapeHtml(generatedAt)}</div>
+  <div class="subtitle">${dateRange ? `Data from ${escapeHtml(dateRange.since)} to ${escapeHtml(dateRange.until)} &mdash; ` : ""}Generated ${escapeHtml(generatedAt)}</div>
 </div>
 
 <div class="tabs">

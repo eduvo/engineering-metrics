@@ -52,7 +52,18 @@ export async function generateReport(): Promise<string> {
   }
 
   const generatedAt = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
-  const html = generateHTML(data, generatedAt);
+
+  // Extract date range from the first data file that has one
+  let dateRange: { since: string; until: string } | undefined;
+  for (const name of PIPELINE_NAMES) {
+    const d = data[name] as any;
+    if (d?.dateRange) {
+      dateRange = d.dateRange;
+      break;
+    }
+  }
+
+  const html = generateHTML(data, generatedAt, dateRange);
 
   await mkdir(REPORT_DIR, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
