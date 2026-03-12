@@ -352,11 +352,11 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
     const pr = prs.summary.crossTeam.total;
     cards.push(`<div class="card">
       <h3>&#128295; Pull Requests</h3>
-      <div class="metric-value">${pr.prCount}</div>
-      <div class="metric-label">Total PRs merged</div>
+      <div class="metric-value">${fmt(pr.medianTimeToCloseDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
+      <div class="metric-label">Median close time</div>
       <div style="margin-top:12px" class="metric-row">
-        <span class="label">Median close</span>
-        <span class="value">${fmt(pr.medianTimeToCloseDays)} days</span>
+        <span class="label">Total PRs</span>
+        <span class="value">${pr.prCount}</span>
       </div>
       <div class="metric-row">
         <span class="label">Average close</span>
@@ -382,22 +382,28 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
 
   if (sla?.summary?.crossTeam?.apmSla?.total) {
     const st = sla.summary.crossTeam.apmSla.total;
-    const apdexColor = (st.averageApdex ?? 0) >= 0.95 ? "var(--green)" : (st.averageApdex ?? 0) >= 0.85 ? "var(--yellow)" : "var(--red)";
     cards.push(`<div class="card">
-      <h3>&#128200; SLA / Reliability</h3>
-      <div class="metric-value" style="color:${apdexColor}">${fmt(st.averageApdex, 4)}</div>
-      <div class="metric-label">Average Apdex</div>
+      <h3>&#128504; Availability</h3>
+      <div class="metric-value">${fmt(st.averageErrorRatePercent, 3)}<span style="font-size:16px;color:var(--text-muted)">%</span></div>
+      <div class="metric-label">Average Error Rate</div>
+    </div>`);
+    const apdexColor = (st.averageApdex ?? 0) >= 0.95 ? "var(--green)" : (st.averageApdex ?? 0) >= 0.85 ? "var(--yellow)" : "var(--red)";
+    const satisfiedColor = (st.averageSatisfiedPercent ?? 0) >= 90 ? "var(--green)" : (st.averageSatisfiedPercent ?? 0) >= 75 ? "var(--yellow)" : "var(--red)";
+    cards.push(`<div class="card">
+      <h3>&#9889; Responsiveness</h3>
+      <div class="metric-value" style="color:${satisfiedColor}">${fmt(st.averageSatisfiedPercent)}<span style="font-size:16px;color:var(--text-muted)">%</span></div>
+      <div class="metric-label">Satisfied requests</div>
       <div style="margin-top:12px" class="metric-row">
-        <span class="label">Error Rate</span>
-        <span class="value">${fmt(st.averageErrorRatePercent, 3)}%</span>
-      </div>
-      <div class="metric-row">
-        <span class="label">Satisfied</span>
-        <span class="value">${fmt(st.averageSatisfiedPercent)}%</span>
+        <span class="label">Apdex</span>
+        <span class="value" style="color:${apdexColor}">${fmt(st.averageApdex, 4)}</span>
       </div>
       <div class="metric-row">
         <span class="label">Response Time</span>
         <span class="value">${fmt(st.averageResponseTimeMs)}ms</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">Throughput</span>
+        <span class="value">${fmt(st.averageThroughputRpm, 0)} rpm</span>
       </div>
     </div>`);
   }
@@ -501,8 +507,103 @@ function renderSLATrendSection(title: string, monthly: Record<string, any>): str
   </div>`;
 }
 
+function renderTeamKPIs(team: string, cycleTime: any, bugs: any, prs: any, sla: any): string {
+  const cards: string[] = [];
+
+  const ctTeam = cycleTime?.summary?.teams?.[team];
+  if (ctTeam?.total) {
+    const ct = ctTeam.total;
+    cards.push(`<div class="card">
+      <h3>&#9201; Cycle Time</h3>
+      <div class="metric-value">${fmt(ct.medianCycleTimeDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
+      <div class="metric-label">Median cycle time (${ct.ticketCount} tickets)</div>
+      <div style="margin-top:12px" class="metric-row">
+        <span class="label">Average</span>
+        <span class="value">${fmt(ct.averageCycleTimeDays)} days</span>
+      </div>
+    </div>`);
+  }
+
+  const prsTeam = prs?.summary?.teams?.[team];
+  if (prsTeam?.total) {
+    const pr = prsTeam.total;
+    cards.push(`<div class="card">
+      <h3>&#128295; Pull Requests</h3>
+      <div class="metric-value">${fmt(pr.medianTimeToCloseDays)}<span style="font-size:16px;color:var(--text-muted)"> days</span></div>
+      <div class="metric-label">Median close time</div>
+      <div style="margin-top:12px" class="metric-row">
+        <span class="label">Total PRs</span>
+        <span class="value">${pr.prCount}</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">Average close</span>
+        <span class="value">${fmt(pr.averageTimeToCloseDays)} days</span>
+      </div>
+    </div>`);
+  }
+
+  const bugsTeam = bugs?.summary?.teams?.[team];
+  if (bugsTeam?.total) {
+    const bt = bugsTeam.total;
+    const totalBugs = Object.values(bt).reduce((sum: number, s: any) => sum + (s.totalBugs || 0), 0);
+    cards.push(`<div class="card">
+      <h3>&#128027; Customer Bugs</h3>
+      <div class="metric-value">${totalBugs}</div>
+      <div class="metric-label">Total bugs reported</div>
+      ${Object.entries(bt)
+        .map(([sev, stats]: [string, any]) =>
+          `<div class="metric-row"><span class="label">${escapeHtml(sev)}</span><span class="value">${stats.totalBugs} <span style="color:var(--text-muted);font-weight:400;font-size:12px">median ${fmt(stats.medianTimeToResolveDays)}d / avg ${fmt(stats.averageTimeToResolveDays)}d</span></span></div>`
+        )
+        .join("")}
+    </div>`);
+  }
+
+  const slaTeam = sla?.summary?.teams?.[team];
+  if (slaTeam?.apmSla?.total) {
+    const st = slaTeam.apmSla.total;
+    const errorRows: string[] = [];
+    errorRows.push(`<div class="metric-row"><span class="label">APM Error Rate</span><span class="value">${fmt(st.averageErrorRatePercent, 3)}%</span></div>`);
+    if (slaTeam.browserErrors?.byApp) {
+      for (const [app, rate] of Object.entries(slaTeam.browserErrors.byApp) as [string, any][]) {
+        const badgeClass = rate <= 2 ? "badge-green" : rate <= 5 ? "badge-yellow" : "badge-red";
+        errorRows.push(`<div class="metric-row"><span class="label">Browser: ${escapeHtml(app)}</span><span class="badge ${badgeClass}">${fmt(rate)}%</span></div>`);
+      }
+    }
+    cards.push(`<div class="card">
+      <h3>&#128504; Availability</h3>
+      <div class="metric-value">${fmt(st.averageErrorRatePercent, 3)}<span style="font-size:16px;color:var(--text-muted)">%</span></div>
+      <div class="metric-label">APM Error Rate</div>
+      ${errorRows.length > 1 ? `<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Browser Errors</div>${errorRows.slice(1).join("")}</div>` : ""}
+    </div>`);
+    const apdexColor = (st.averageApdex ?? 0) >= 0.95 ? "var(--green)" : (st.averageApdex ?? 0) >= 0.85 ? "var(--yellow)" : "var(--red)";
+    const satisfiedColor = (st.averageSatisfiedPercent ?? 0) >= 90 ? "var(--green)" : (st.averageSatisfiedPercent ?? 0) >= 75 ? "var(--yellow)" : "var(--red)";
+    cards.push(`<div class="card">
+      <h3>&#9889; Responsiveness</h3>
+      <div class="metric-value" style="color:${satisfiedColor}">${fmt(st.averageSatisfiedPercent)}<span style="font-size:16px;color:var(--text-muted)">%</span></div>
+      <div class="metric-label">Satisfied requests</div>
+      <div style="margin-top:12px" class="metric-row">
+        <span class="label">Apdex</span>
+        <span class="value" style="color:${apdexColor}">${fmt(st.averageApdex, 4)}</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">Response Time</span>
+        <span class="value">${fmt(st.averageResponseTimeMs)}ms</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">Throughput</span>
+        <span class="value">${fmt(st.averageThroughputRpm, 0)} rpm</span>
+      </div>
+    </div>`);
+  }
+
+  if (cards.length === 0) return "";
+  return `<div class="section"><div class="section-title">Key Performance Indicators</div><div class="grid">${cards.join("")}</div></div>`;
+}
+
 function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any): string {
   const sections: string[] = [];
+
+  sections.push(renderTeamKPIs(team, cycleTime, bugs, prs, sla));
 
   // Cycle Time
   const ctTeam = cycleTime?.summary?.teams?.[team];
