@@ -374,7 +374,7 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
       <div class="metric-label">Total bugs reported</div>
       ${Object.entries(bt)
         .map(([sev, stats]: [string, any]) =>
-          `<div class="metric-row"><span class="label">${escapeHtml(sev)}</span><span class="value">${stats.totalBugs} <span style="color:var(--text-muted);font-weight:400;font-size:12px">TTR ${fmt(stats.medianTimeToResolveDays)}d</span></span></div>`
+          `<div class="metric-row"><span class="label">${escapeHtml(sev)}</span><span class="value">${stats.totalBugs} <span style="color:var(--text-muted);font-weight:400;font-size:12px">median ${fmt(stats.medianTimeToResolveDays)}d / avg ${fmt(stats.averageTimeToResolveDays)}d</span></span></div>`
         )
         .join("")}
     </div>`);
@@ -448,7 +448,7 @@ function renderBugsTrendSection(title: string, monthly: Record<string, any>): st
     <div class="section-title"><span class="icon">&#128027;</span> ${title}</div>
     <div class="card">
       <table>
-        <thead><tr><th>Month</th>${severities.map((s) => `<th>${escapeHtml(s)} Count</th><th>${escapeHtml(s)} TTR (days)</th>`).join("")}</tr></thead>
+        <thead><tr><th>Month</th>${severities.map((s) => `<th>${escapeHtml(s)} Count</th><th>${escapeHtml(s)} Median TTR</th><th>${escapeHtml(s)} Avg TTR</th>`).join("")}</tr></thead>
         <tbody>
           ${months
             .map(
@@ -457,8 +457,8 @@ function renderBugsTrendSection(title: string, monthly: Record<string, any>): st
                   .map((s) => {
                     const st = monthly[m][s];
                     return st
-                      ? `<td>${st.totalBugs}</td><td>${fmt(st.medianTimeToResolveDays)}</td>`
-                      : `<td>0</td><td>N/A</td>`;
+                      ? `<td>${st.totalBugs}</td><td>${fmt(st.medianTimeToResolveDays)}</td><td>${fmt(st.averageTimeToResolveDays)}</td>`
+                      : `<td>0</td><td>N/A</td><td>N/A</td>`;
                   })
                   .join("")}</tr>`
             )
@@ -549,7 +549,7 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
           ${bugsTeam.total
             ? Object.entries(bugsTeam.total)
                 .map(([sev, stats]: [string, any]) =>
-                  `<div class="metric-row"><span class="label">${escapeHtml(sev)}</span><span class="value">${stats.totalBugs} bugs, TTR ${fmt(stats.medianTimeToResolveDays)}d</span></div>`
+                  `<div class="metric-row"><span class="label">${escapeHtml(sev)}</span><span class="value">${stats.totalBugs} bugs, median ${fmt(stats.medianTimeToResolveDays)}d / avg ${fmt(stats.averageTimeToResolveDays)}d</span></div>`
                 )
                 .join("")
             : ""}
