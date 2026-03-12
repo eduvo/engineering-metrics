@@ -117,7 +117,7 @@ async function runJiraCycleTime(opts: ETLOptions) {
     const allRecords = Object.values(teamRecords).flat();
 
     console.log(`\n[jira-cycle-time] Loading...`);
-    const outputPath = await saveJson("jira-cycle-time", { summary, records: teamRecords });
+    const outputPath = await saveJson("jira-cycle-time", { summary, records: teamRecords, dateRange: { since: opts.since, until: opts.until ?? new Date().toISOString().slice(0, 10) } });
     console.log(`[jira-cycle-time] Done -> ${outputPath}`);
 
     console.log("\n--- Summary ---");
@@ -208,7 +208,7 @@ async function runJiraBugs(opts: ETLOptions) {
     const allRecords = Object.values(teamRecords).flat();
 
     console.log(`\n[jira-bugs] Loading...`);
-    const outputPath = await saveJson("jira-bugs", { summary, records: teamRecords });
+    const outputPath = await saveJson("jira-bugs", { summary, records: teamRecords, dateRange: { since: opts.since, until: opts.until ?? new Date().toISOString().slice(0, 10) } });
     console.log(`[jira-bugs] Done -> ${outputPath}`);
 
     console.log("\n--- Summary ---");
@@ -291,7 +291,7 @@ async function runGitHubPRs(opts: ETLOptions) {
     const allRecords = Object.values(teamRecords).flat();
 
     console.log(`\n[github-prs] Loading...`);
-    const outputPath = await saveJson("github-prs", { summary, records: teamRecords });
+    const outputPath = await saveJson("github-prs", { summary, records: teamRecords, dateRange: { since: opts.since, until: opts.until ?? new Date().toISOString().slice(0, 10) } });
     console.log(`[github-prs] Done -> ${outputPath}`);
 
     console.log("\n--- Summary ---");
@@ -380,7 +380,7 @@ async function runNewRelicSla(opts: ETLOptions) {
     const allRecords = Object.values(teamRecords).flat();
 
     console.log(`\n[newrelic-sla] Loading...`);
-    const outputPath = await saveJson("newrelic-sla", { summary, records: teamRecords });
+    const outputPath = await saveJson("newrelic-sla", { summary, records: teamRecords, dateRange: { since: opts.since, until: opts.until ?? new Date().toISOString().slice(0, 10) } });
     console.log(`[newrelic-sla] Done -> ${outputPath}`);
 
     console.log("\n--- Summary ---");
