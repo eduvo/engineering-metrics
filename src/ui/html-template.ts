@@ -295,38 +295,34 @@ function renderOverview(cycleTime: any, bugs: any, prs: any, sla: any): string {
 
   sections.push(renderCrossTeamKPIs(cycleTime, bugs, prs, sla));
 
-  if (cycleTime?.summary?.crossTeam?.monthly) {
-    sections.push(renderMonthlyTrendSection(
-      "Cycle Time Trend (Cross-Team)",
-      "&#9201;",
-      cycleTime.summary.crossTeam.monthly,
-      (stats: any) => [
-        { label: "Tickets", value: stats.ticketCount },
-        { label: "Median", value: `${fmt(stats.medianCycleTimeDays)}d` },
-        { label: "Average", value: `${fmt(stats.averageCycleTimeDays)}d` },
-      ]
-    ));
-  }
-
-  if (prs?.summary?.crossTeam?.monthly) {
-    sections.push(renderMonthlyTrendSection(
-      "PR Throughput Trend (Cross-Team)",
-      "&#128295;",
-      prs.summary.crossTeam.monthly,
-      (stats: any) => [
-        { label: "PRs", value: stats.prCount },
-        { label: "Median Close", value: `${fmt(stats.medianTimeToCloseDays)}d` },
-        { label: "Avg Close", value: `${fmt(stats.averageTimeToCloseDays)}d` },
-      ]
-    ));
-  }
-
-  if (bugs?.summary?.crossTeam?.monthly) {
-    sections.push(renderBugsTrendSection("Bug Trend (Cross-Team)", bugs.summary.crossTeam.monthly));
-  }
-
   if (sla?.summary?.crossTeam?.apmSla?.monthly) {
     sections.push(renderSLATrendSection("SLA Trend (Cross-Team)", sla.summary.crossTeam.apmSla.monthly));
+  }
+
+  if (cycleTime?.summary?.crossTeam?.weekly) {
+    sections.push(renderWeeklyTrendChart(
+      "Weekly Cycle Time Trend (Cross-Team)", "&#9201;",
+      cycleTime.summary.crossTeam.weekly,
+      [
+        { label: "Median (days)", extract: (s: any) => s.medianCycleTimeDays, color: "#6c8aff" },
+        { label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" },
+      ]
+    ));
+  }
+
+  if (prs?.summary?.crossTeam?.weekly) {
+    sections.push(renderWeeklyTrendChart(
+      "Weekly PR Trend (Cross-Team)", "&#128295;",
+      prs.summary.crossTeam.weekly,
+      [
+        { label: "Median Close (days)", extract: (s: any) => s.medianTimeToCloseDays, color: "#6c8aff" },
+        { label: "Average Close (days)", extract: (s: any) => s.averageTimeToCloseDays, color: "#a78bfa" },
+      ]
+    ));
+  }
+
+  if (bugs?.summary?.crossTeam?.weekly) {
+    sections.push(renderBugsWeeklyChart("Weekly Bug Trend (Cross-Team)", bugs.summary.crossTeam.weekly));
   }
 
   return sections.join("\n");
@@ -412,67 +408,102 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
   return `<div class="section"><div class="section-title">Key Performance Indicators</div><div class="grid">${cards.join("")}</div></div>`;
 }
 
-function renderMonthlyTrendSection(
+function renderWeeklyTrendChart(
   title: string,
   icon: string,
-  monthly: Record<string, any>,
-  extractCols: (stats: any) => { label: string; value: string | number }[]
+  weekly: Record<string, any>,
+  lines: { label: string; extract: (stats: any) => number | null; color: string }[]
 ): string {
-  const months = Object.keys(monthly).sort();
-  if (months.length === 0) return "";
+  const weeks = Object.keys(weekly).sort();
+  if (weeks.length < 2) return "";
 
-  const sampleCols = extractCols(monthly[months[0]]);
+  const W = 720, H = 260;
+  const pad = { t: 20, r: 150, b: 55, l: 55 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  const seriesData = lines.map(l => ({
+    ...l,
+    values: weeks.map(w => l.extract(weekly[w]))
+  }));
+
+  let maxVal = 0;
+  for (const s of seriesData) {
+    for (const v of s.values) {
+      if (v !== null && v > maxVal) maxVal = v;
+    }
+  }
+  if (maxVal === 0) maxVal = 1;
+  maxVal *= 1.1;
+
+  const xStep = weeks.length > 1 ? pw / (weeks.length - 1) : pw;
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const y = pad.t + ph - f * ph;
+    const val = f * maxVal;
+    const label = val >= 100 ? val.toFixed(0) : val >= 10 ? val.toFixed(1) : val.toFixed(2);
+    return `<line x1="${pad.l}" y1="${y}" x2="${pad.l + pw}" y2="${y}" stroke="var(--border)" ${f > 0 ? 'stroke-dasharray="4,4"' : ""} />
+      <text x="${pad.l - 8}" y="${y + 4}" text-anchor="end" fill="var(--text-muted)" font-size="10">${label}</text>`;
+  }).join("");
+
+  const paths = seriesData.map(s => {
+    const points: string[] = [];
+    const dots: string[] = [];
+    s.values.forEach((v, i) => {
+      if (v !== null) {
+        const x = pad.l + i * xStep;
+        const y = pad.t + ph - (v / maxVal) * ph;
+        points.push(`${x},${y}`);
+        dots.push(`<circle cx="${x}" cy="${y}" r="3" fill="${s.color}" />`);
+      }
+    });
+    if (points.length < 2) return "";
+    return `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${points.join(" ")}" />${dots.join("")}`;
+  }).join("");
+
+  const labelEvery = Math.max(1, Math.ceil(weeks.length / 14));
+  const xLabels = weeks.map((w, i) =>
+    i % labelEvery === 0
+      ? `<text x="${pad.l + i * xStep}" y="${H - 5}" text-anchor="end" fill="var(--text-muted)" font-size="10" transform="rotate(-45 ${pad.l + i * xStep} ${H - 5})">${w}</text>`
+      : ""
+  ).join("");
+
+  const legend = seriesData.map((s, i) =>
+    `<rect x="${W - pad.r + 10}" y="${pad.t + 3 + i * 20}" width="12" height="12" rx="2" fill="${s.color}" />
+     <text x="${W - pad.r + 26}" y="${pad.t + 13 + i * 20}" fill="var(--text)" font-size="11">${escapeHtml(s.label)}</text>`
+  ).join("");
+
   return `<div class="section">
     <div class="section-title"><span class="icon">${icon}</span> ${title}</div>
     <div class="card">
-      <table>
-        <thead><tr><th>Month</th>${sampleCols.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
-        <tbody>
-          ${months
-            .map((m) => {
-              const cols = extractCols(monthly[m]);
-              return `<tr><td><strong>${escapeHtml(m)}</strong></td>${cols.map((c) => `<td>${escapeHtml(String(c.value))}</td>`).join("")}</tr>`;
-            })
-            .join("")}
-        </tbody>
-      </table>
+      <svg width="100%" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">
+        ${gridLines}
+        ${paths}
+        ${xLabels}
+        ${legend}
+      </svg>
     </div>
   </div>`;
 }
 
-function renderBugsTrendSection(title: string, monthly: Record<string, any>): string {
-  const months = Object.keys(monthly).sort();
-  if (months.length === 0) return "";
+function renderBugsWeeklyChart(title: string, weekly: Record<string, any>): string {
+  const weeks = Object.keys(weekly).sort();
+  if (weeks.length < 2) return "";
 
   const allSeverities = new Set<string>();
-  for (const m of months) {
-    Object.keys(monthly[m]).forEach((s) => allSeverities.add(s));
+  for (const w of weeks) {
+    Object.keys(weekly[w]).forEach(s => allSeverities.add(s));
   }
   const severities = Array.from(allSeverities).sort();
+  const colors = ["#6c8aff", "#34d399", "#fbbf24", "#f87171", "#a78bfa", "#fb923c"];
 
-  return `<div class="section">
-    <div class="section-title"><span class="icon">&#128027;</span> ${title}</div>
-    <div class="card">
-      <table>
-        <thead><tr><th>Month</th>${severities.map((s) => `<th>${escapeHtml(s)} Count</th><th>${escapeHtml(s)} Median TTR</th><th>${escapeHtml(s)} Avg TTR</th>`).join("")}</tr></thead>
-        <tbody>
-          ${months
-            .map(
-              (m) =>
-                `<tr><td><strong>${escapeHtml(m)}</strong></td>${severities
-                  .map((s) => {
-                    const st = monthly[m][s];
-                    return st
-                      ? `<td>${st.totalBugs}</td><td>${fmt(st.medianTimeToResolveDays)}</td><td>${fmt(st.averageTimeToResolveDays)}</td>`
-                      : `<td>0</td><td>N/A</td><td>N/A</td>`;
-                  })
-                  .join("")}</tr>`
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  </div>`;
+  return renderWeeklyTrendChart(title, "&#128027;", weekly,
+    severities.map((sev, i) => ({
+      label: sev,
+      extract: (stats: any) => stats[sev]?.totalBugs ?? null,
+      color: colors[i % colors.length],
+    }))
+  );
 }
 
 function renderSLATrendSection(title: string, monthly: Record<string, any>): string {
@@ -622,17 +653,16 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
     sections.push(`<div class="section">
       <div class="section-title"><span class="icon">&#9201;</span> Cycle Time</div>
       <div class="grid">${cards.join("")}</div>
-      ${ctTeam.monthly ? renderMonthlyTable("Monthly Cycle Time", ctTeam.monthly, [
-        { key: "ticketCount", label: "Tickets" },
-        { key: "medianCycleTimeDays", label: "Median (days)", fmt: true },
-        { key: "averageCycleTimeDays", label: "Average (days)", fmt: true },
-      ]) : ""}
-      ${ctTeam.quarterly ? renderMonthlyTable("Quarterly Cycle Time", ctTeam.quarterly, [
-        { key: "ticketCount", label: "Tickets" },
-        { key: "medianCycleTimeDays", label: "Median (days)", fmt: true },
-        { key: "averageCycleTimeDays", label: "Average (days)", fmt: true },
-      ]) : ""}
     </div>`);
+    if (ctTeam.weekly) {
+      sections.push(renderWeeklyTrendChart(
+        `Weekly Cycle Time \u2014 ${team}`, "&#9201;", ctTeam.weekly,
+        [
+          { label: "Median (days)", extract: (s: any) => s.medianCycleTimeDays, color: "#6c8aff" },
+          { label: "Average (days)", extract: (s: any) => s.averageCycleTimeDays, color: "#a78bfa" },
+        ]
+      ));
+    }
   }
 
   // Bugs
@@ -656,8 +686,10 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
             : ""}
         </div>
       </div>
-      ${bugsTeam.monthly ? renderBugsTrendSection(`Monthly Bugs — ${team}`, bugsTeam.monthly) : ""}
     </div>`);
+    if (bugsTeam.weekly) {
+      sections.push(renderBugsWeeklyChart(`Weekly Bug Trend \u2014 ${team}`, bugsTeam.weekly));
+    }
   }
 
   // PRs
@@ -700,12 +732,16 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
     sections.push(`<div class="section">
       <div class="section-title"><span class="icon">&#128295;</span> Pull Requests</div>
       <div class="grid">${cards.join("")}</div>
-      ${prsTeam.monthly ? renderMonthlyTable("Monthly PRs", prsTeam.monthly, [
-        { key: "prCount", label: "PRs" },
-        { key: "medianTimeToCloseDays", label: "Median Close (days)", fmt: true },
-        { key: "averageTimeToCloseDays", label: "Avg Close (days)", fmt: true },
-      ]) : ""}
     </div>`);
+    if (prsTeam.weekly) {
+      sections.push(renderWeeklyTrendChart(
+        `Weekly PR Trend \u2014 ${team}`, "&#128295;", prsTeam.weekly,
+        [
+          { label: "Median Close (days)", extract: (s: any) => s.medianTimeToCloseDays, color: "#6c8aff" },
+          { label: "Average Close (days)", extract: (s: any) => s.averageTimeToCloseDays, color: "#a78bfa" },
+        ]
+      ));
+    }
   }
 
   // SLA
@@ -740,6 +776,15 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
         </div>
         ${slaTeam.apmSla.monthly ? renderSLAAppTable(slaTeam.apmSla.monthly) : ""}
       </div>`);
+      if (slaTeam.apmSla.weekly) {
+        sections.push(renderWeeklyTrendChart(
+          `Weekly SLA Trend \u2014 ${team}`, "&#128200;", slaTeam.apmSla.weekly,
+          [
+            { label: "Satisfied %", extract: (s: any) => s.averageSatisfiedPercent, color: "#34d399" },
+            { label: "Error Rate %", extract: (s: any) => s.averageErrorRatePercent, color: "#f87171" },
+          ]
+        ));
+      }
     }
   }
 
@@ -748,32 +793,6 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
   }
 
   return sections.join("\n");
-}
-
-function renderMonthlyTable(
-  title: string,
-  data: Record<string, any>,
-  columns: { key: string; label: string; fmt?: boolean }[]
-): string {
-  const periods = Object.keys(data).sort();
-  if (periods.length === 0) return "";
-
-  return `<div class="card" style="margin-top:16px">
-    <h3>${escapeHtml(title)}</h3>
-    <table>
-      <thead><tr><th>Period</th>${columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
-      <tbody>
-        ${periods
-          .map(
-            (p) =>
-              `<tr><td><strong>${escapeHtml(p)}</strong></td>${columns
-                .map((c) => `<td>${c.fmt ? fmt(data[p]?.[c.key]) : (data[p]?.[c.key] ?? "N/A")}</td>`)
-                .join("")}</tr>`
-          )
-          .join("")}
-      </tbody>
-    </table>
-  </div>`;
 }
 
 function renderSLAAppTable(monthly: Record<string, any>): string {
