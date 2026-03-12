@@ -198,6 +198,25 @@ npm run etl -- all --team MB --since 2026-01-01 --until 2026-03-31
 | `-s, --since <date>` | No | `2026-02-09` | Start date (YYYY-MM-DD) |
 | `-u, --until <date>` | No | — | End date (YYYY-MM-DD) |
 
+After all pipelines complete, the `all` command automatically generates an HTML dashboard report.
+
+### Dashboard Report
+
+Generates a self-contained HTML dashboard from the latest ETL data files. The report is produced automatically after `npm run etl -- all`, or can be generated on demand:
+
+```bash
+npm run report
+```
+
+The dashboard includes:
+
+- **Overview tab** — cross-team KPIs (cycle time, PR throughput, bug counts, SLA/Apdex) and monthly trend tables
+- **Per-team tabs** — detailed breakdowns for each team: cycle time stats, bug severity with TTR, PR stats with top contributors, APM SLA per-app, and browser error rates
+
+Reports are saved to `reports/dashboard-<timestamp>.html` and can be opened directly in a browser.
+
+See `docs/dashboard.md` for details on the report structure and architecture.
+
 ### Output
 
 Results are written as JSON to `data/<pipeline-name>-<timestamp>.json`, containing both `summary` and `records`.

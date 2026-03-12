@@ -5,8 +5,50 @@ import { JiraBugsPipeline, summarizeAll } from "./pipelines/jira-bugs/index.js";
 import { GitHubPRsPipeline, summarizeAll as summarizeAllPRs } from "./pipelines/github-prs/index.js";
 import { NewRelicErrorsPipeline, summarizeAll as summarizeAllErrors } from "./pipelines/newrelic-sla/index.js";
 import { saveJson } from "./loaders/json-loader.js";
+import { generateReport } from "./ui/generate-report.js";
 
 type ETLOptions = { team?: string; since: string; until?: string };
+
+async function runAllPipelines(opts: ETLOptions) {
+  const pipelines = [
+    { name: "jira-cycle-time", run: runJiraCycleTime },
+    { name: "jira-bugs", run: runJiraBugs },
+    { name: "github-prs", run: runGitHubPRs },
+    { name: "newrelic-sla", run: runNewRelicSla },
+  ];
+
+  const results: { name: string; status: "success" | "failed"; error?: string }[] = [];
+
+  for (const pipeline of pipelines) {
+    try {
+      console.log(`\n${"=".repeat(60)}`);
+      console.log(`Running ${pipeline.name}...`);
+      console.log("=".repeat(60));
+      await pipeline.run(opts);
+      results.push({ name: pipeline.name, status: "success" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n[${pipeline.name}] FAILED: ${message}`);
+      results.push({ name: pipeline.name, status: "failed", error: message });
+    }
+  }
+
+  console.log(`\n${"=".repeat(60)}`);
+  console.log("All Pipelines — Summary");
+  console.log("=".repeat(60));
+  for (const r of results) {
+    const icon = r.status === "success" ? "✓" : "✗";
+    console.log(`  ${icon} ${r.name}: ${r.status}${r.error ? ` (${r.error})` : ""}`);
+  }
+
+  const failed = results.filter((r) => r.status === "failed");
+  if (failed.length > 0) {
+    console.log(`\n${failed.length} pipeline(s) failed.`);
+    process.exitCode = 1;
+  } else {
+    console.log(`\nAll ${results.length} pipelines completed successfully.`);
+  }
+}
 
 const program = new Command();
 
@@ -372,43 +414,40 @@ program
   .option("-s, --since <date>", "Start date (YYYY-MM-DD)", "2026-02-09")
   .option("-u, --until <date>", "End date (YYYY-MM-DD)")
   .action(async (opts: ETLOptions) => {
-    const pipelines = [
-      { name: "jira-cycle-time", run: runJiraCycleTime },
-      { name: "jira-bugs", run: runJiraBugs },
-      { name: "github-prs", run: runGitHubPRs },
-      { name: "newrelic-sla", run: runNewRelicSla },
-    ];
+    await runAllPipelines(opts);
 
-    const results: { name: string; status: "success" | "failed"; error?: string }[] = [];
-
-    for (const pipeline of pipelines) {
-      try {
-        console.log(`\n${"=".repeat(60)}`);
-        console.log(`Running ${pipeline.name}...`);
-        console.log("=".repeat(60));
-        await pipeline.run(opts);
-        results.push({ name: pipeline.name, status: "success" });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error(`\n[${pipeline.name}] FAILED: ${message}`);
-        results.push({ name: pipeline.name, status: "failed", error: message });
-      }
+    // Generate dashboard report
+    try {
+      console.log(`\n${"=".repeat(60)}`);
+      console.log("Generating dashboard report...");
+      console.log("=".repeat(60));
+      const reportPath = await generateReport();
+      console.log(`\nDashboard: ${reportPath}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n[report] FAILED: ${message}`);
     }
+  });
 
-    console.log(`\n${"=".repeat(60)}`);
-    console.log("All Pipelines \u2014 Summary");
-    console.log("=".repeat(60));
-    for (const r of results) {
-      const icon = r.status === "success" ? "\u2713" : "\u2717";
-      console.log(`  ${icon} ${r.name}: ${r.status}${r.error ? ` (${r.error})` : ""}`);
-    }
+program
+  .command("report")
+  .description("Run all ETL pipelines, then generate an HTML dashboard")
+  .option("-t, --team <key>", "Team key. If omitted, runs for all configured teams.")
+  .option("-s, --since <date>", "Start date (YYYY-MM-DD)", "2026-02-09")
+  .option("-u, --until <date>", "End date (YYYY-MM-DD)")
+  .action(async (opts: ETLOptions) => {
+    await runAllPipelines(opts);
 
-    const failed = results.filter((r) => r.status === "failed");
-    if (failed.length > 0) {
-      console.log(`\n${failed.length} pipeline(s) failed.`);
-      process.exitCode = 1;
-    } else {
-      console.log(`\nAll ${results.length} pipelines completed successfully.`);
+    // Generate dashboard report
+    try {
+      console.log(`\n${"=".repeat(60)}`);
+      console.log("Generating dashboard report...");
+      console.log("=".repeat(60));
+      const reportPath = await generateReport();
+      console.log(`\nOpen in browser: file://${reportPath}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n[report] FAILED: ${message}`);
     }
   });
 
