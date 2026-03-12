@@ -7,6 +7,7 @@ export interface CycleTimeStats {
 }
 
 export interface TeamCycleTimeSummary {
+  weekly: Record<string, CycleTimeStats>;
   monthly: Record<string, CycleTimeStats>;
   quarterly: Record<string, CycleTimeStats>;
   total: CycleTimeStats;
@@ -15,6 +16,7 @@ export interface TeamCycleTimeSummary {
 export interface CycleTimeSummary {
   teams: Record<string, TeamCycleTimeSummary>;
   crossTeam: {
+    weekly: Record<string, CycleTimeStats>;
     monthly: Record<string, CycleTimeStats>;
     quarterly: Record<string, CycleTimeStats>;
     total: CycleTimeStats;
@@ -75,7 +77,32 @@ function groupByQuarter(records: MetricRecord[]): Record<string, MetricRecord[]>
   return groups;
 }
 
+function getISOWeek(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const year = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${year}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+function groupByWeek(records: MetricRecord[]): Record<string, MetricRecord[]> {
+  const groups: Record<string, MetricRecord[]> = {};
+  for (const r of records) {
+    const week = getISOWeek(r.resolvedDate ?? r.endDate);
+    if (!groups[week]) groups[week] = [];
+    groups[week].push(r);
+  }
+  return groups;
+}
+
 export function summarizeCycleTime(records: MetricRecord[]): TeamCycleTimeSummary {
+  const weekly: Record<string, CycleTimeStats> = {};
+  for (const [week, recs] of Object.entries(groupByWeek(records)).sort(([a], [b]) => a.localeCompare(b))) {
+    weekly[week] = computeStats(recs);
+  }
+
   const monthly: Record<string, CycleTimeStats> = {};
   for (const [month, recs] of Object.entries(groupByMonth(records)).sort(([a], [b]) => a.localeCompare(b))) {
     monthly[month] = computeStats(recs);
@@ -87,6 +114,7 @@ export function summarizeCycleTime(records: MetricRecord[]): TeamCycleTimeSummar
   }
 
   return {
+    weekly,
     monthly,
     quarterly,
     total: computeStats(records),
@@ -102,6 +130,11 @@ export function summarizeAll(teamRecords: Record<string, MetricRecord[]>): Cycle
     allRecords.push(...records);
   }
 
+  const crossWeekly: Record<string, CycleTimeStats> = {};
+  for (const [week, recs] of Object.entries(groupByWeek(allRecords)).sort(([a], [b]) => a.localeCompare(b))) {
+    crossWeekly[week] = computeStats(recs);
+  }
+
   const crossMonthly: Record<string, CycleTimeStats> = {};
   for (const [month, recs] of Object.entries(groupByMonth(allRecords)).sort(([a], [b]) => a.localeCompare(b))) {
     crossMonthly[month] = computeStats(recs);
@@ -115,6 +148,7 @@ export function summarizeAll(teamRecords: Record<string, MetricRecord[]>): Cycle
   return {
     teams,
     crossTeam: {
+      weekly: crossWeekly,
       monthly: crossMonthly,
       quarterly: crossQuarterly,
       total: computeStats(allRecords),
