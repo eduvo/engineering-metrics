@@ -33,7 +33,7 @@ export function computeCycleTime(
     }
 
     let storyPoints: number | null = null;
-    if (estimationFieldId) {
+    if (estimationFieldId && issue.fields.resolutiondate) {
       const raw = (issue.fields as unknown as Record<string, unknown>)[estimationFieldId];
       if (typeof raw === "number") {
         storyPoints = raw;
