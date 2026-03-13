@@ -187,7 +187,6 @@ async function runJiraBugs(opts: ETLOptions) {
       console.log(`Using customerBugsFilter: ${bugsConfig.customerBugsFilter}`);
 
       const pipeline = new JiraBugsPipeline(config, {
-        projectKey: teamKey,
         since: opts.since,
         until: opts.until,
         customerBugsFilter: bugsConfig.customerBugsFilter,

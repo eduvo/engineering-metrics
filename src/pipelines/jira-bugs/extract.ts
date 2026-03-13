@@ -20,7 +20,6 @@ export async function extractJiraBugs(
 
 function buildBugsJql(options: JiraBugsExtractOptions): string {
   const parts = [
-    `project = "${options.projectKey}"`,
     `created >= "${options.since}"`,
   ];
 
