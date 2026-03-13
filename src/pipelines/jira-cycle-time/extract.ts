@@ -1,24 +1,32 @@
 import { JiraConfig } from "../../config.js";
-import { fetchJiraIssues } from "../../shared/jira-api.js";
+import { fetchJiraIssues, resolveFieldId } from "../../shared/jira-api.js";
 import { JiraSearchResponse } from "../../shared/jira-types.js";
 import { JiraExtractOptions } from "./types.js";
 
 export async function extractJiraIssues(
   config: JiraConfig,
   options: JiraExtractOptions,
-): Promise<JiraSearchResponse["issues"]> {
+): Promise<{ issues: JiraSearchResponse["issues"]; estimationFieldId: string | null }> {
   const jql = buildJql(options);
 
-  return fetchJiraIssues(config, {
+  let estimationFieldId: string | null = null;
+  let extraFields = "";
+  if (options.estimationField) {
+    estimationFieldId = await resolveFieldId(config, options.estimationField);
+    extraFields = `,${estimationFieldId}`;
+  }
+
+  const issues = await fetchJiraIssues(config, {
     jql,
-    fields: "summary,description,issuetype,assignee,created,resolutiondate",
+    fields: `summary,description,issuetype,assignee,created,resolutiondate${extraFields}`,
     expand: "changelog",
   });
+
+  return { issues, estimationFieldId };
 }
 
 function buildJql(options: JiraExtractOptions): string {
   const parts = [
-    `project = "${options.projectKey}"`,
     `resolved >= "${options.since}"`,
   ];
 

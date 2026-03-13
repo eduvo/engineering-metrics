@@ -12,6 +12,7 @@ export type { CycleTimeSummary } from "./summarize.js";
 
 export class JiraCycleTimePipeline extends Pipeline<JiraIssue, MetricRecord> {
   readonly name = "jira-cycle-time";
+  private estimationFieldId: string | null = null;
 
   constructor(
     private config: JiraConfig,
@@ -22,11 +23,13 @@ export class JiraCycleTimePipeline extends Pipeline<JiraIssue, MetricRecord> {
   }
 
   async extract(): Promise<JiraIssue[]> {
-    return extractJiraIssues(this.config, this.options) as Promise<JiraIssue[]>;
+    const { issues, estimationFieldId } = await extractJiraIssues(this.config, this.options);
+    this.estimationFieldId = estimationFieldId;
+    return issues as JiraIssue[];
   }
 
   transform(raw: JiraIssue[]): MetricRecord[] {
-    return computeCycleTime(raw, this.cycleTimeConfig.startStatus, this.cycleTimeConfig.endStatus);
+    return computeCycleTime(raw, this.cycleTimeConfig.startStatus, this.cycleTimeConfig.endStatus, this.estimationFieldId);
   }
 
   summarize(records: MetricRecord[]): PipelineSummary {

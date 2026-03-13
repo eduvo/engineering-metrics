@@ -93,13 +93,13 @@ async function runJiraCycleTime(opts: ETLOptions) {
       }
 
       console.log(`\n=== Team: ${teamKey} ===`);
-      console.log(`Using statuses: "${cycleTimeConfig.startStatus}" → "${cycleTimeConfig.endStatus}"`);
+      console.log(`Using statuses: "${cycleTimeConfig.startStatus}" \u2192 "${cycleTimeConfig.endStatus}"`);
 
       const pipeline = new JiraCycleTimePipeline(config, cycleTimeConfig, {
-        projectKey: teamKey,
         since: opts.since,
         until: opts.until,
         filter: cycleTimeConfig.filter,
+        estimationField: cycleTimeConfig.estimationField,
       });
 
       console.log(`[jira-cycle-time] Extracting...`);

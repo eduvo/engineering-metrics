@@ -15,6 +15,7 @@ export interface CycleTimeConfig {
   startStatus: string;
   endStatus: string;
   filter?: string;
+  estimationField?: string;
 }
 
 export interface BugsConfig {

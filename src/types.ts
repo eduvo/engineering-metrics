@@ -12,6 +12,7 @@ export interface MetricRecord {
   assignee: string | null;
   cycleTimeDays: number | null;
   leadTimeDays: number | null;
+  storyPoints: number | null;
   startDate: string | null;
   endDate: string | null;
   startStatus: string;

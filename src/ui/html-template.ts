@@ -320,6 +320,13 @@ function renderOverview(cycleTime: any, bugs: any, prs: any, sla: any): string {
       cycleTime.summary.crossTeam.weekly,
       [{ label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" }]
     ));
+    if (cycleTime.summary.crossTeam.total.totalStoryPoints > 0) {
+      sections.push(renderWeeklyTrendChart(
+        "Weekly Velocity (Cross-Team)", "&#127937;",
+        cycleTime.summary.crossTeam.weekly,
+        [{ label: "Story Points", extract: (s: any) => s.totalStoryPoints, color: "#22d3ee" }]
+      ));
+    }
   }
 
   if (prs?.summary?.crossTeam?.weekly) {
@@ -363,6 +370,17 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
         <span class="value">${fmt(ct.averageLeadTimeDays)} days</span>
       </div>
     </div>`);
+    if (ct.totalStoryPoints > 0) {
+      cards.push(`<div class="card">
+        <h3>&#127937; Velocity</h3>
+        <div class="metric-value">${fmt(ct.totalStoryPoints, 1)}<span style="font-size:16px;color:var(--text-muted)"> pts</span></div>
+        <div class="metric-label">Total story points (${ct.estimatedTicketCount} estimated tickets)</div>
+        <div style="margin-top:12px" class="metric-row">
+          <span class="label">Average per ticket</span>
+          <span class="value">${fmt(ct.averageStoryPoints, 1)} pts</span>
+        </div>
+      </div>`);
+    }
   }
 
   if (prs?.summary?.crossTeam?.total) {
@@ -594,8 +612,17 @@ function renderTeamKPIs(team: string, cycleTime: any, bugs: any, prs: any, sla: 
         <span class="label">Average</span>
         <span class="value">${fmt(ct.averageLeadTimeDays)} days</span>
       </div>
-    </div>`);
-  }
+    </div>`);    if (ct.totalStoryPoints > 0) {
+      cards.push(`<div class=\"card\">
+        <h3>&#127937; Velocity</h3>
+        <div class=\"metric-value\">${fmt(ct.totalStoryPoints, 1)}<span style=\"font-size:16px;color:var(--text-muted)\"> pts</span></div>
+        <div class=\"metric-label\">Total story points (${ct.estimatedTicketCount} estimated tickets)</div>
+        <div style=\"margin-top:12px\" class=\"metric-row\">
+          <span class=\"label\">Average per ticket</span>
+          <span class=\"value\">${fmt(ct.averageStoryPoints, 1)} pts</span>
+        </div>
+      </div>`);
+    }  }
 
   const prsTeam = prs?.summary?.teams?.[team];
   if (prsTeam?.total) {
@@ -699,6 +726,16 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
           <div class="mini-stat"><div class="val">${fmt(ctTeam.total.averageLeadTimeDays)}</div><div class="lbl">Average (days)</div></div>
         </div>
       </div>`);
+      if (ctTeam.total.totalStoryPoints > 0) {
+        cards.push(`<div class="card">
+          <h3>Velocity</h3>
+          <div class="mini-grid">
+            <div class="mini-stat"><div class="val">${fmt(ctTeam.total.totalStoryPoints, 1)}</div><div class="lbl">Total Story Points</div></div>
+            <div class="mini-stat"><div class="val">${ctTeam.total.estimatedTicketCount}</div><div class="lbl">Estimated Tickets</div></div>
+            <div class="mini-stat"><div class="val">${fmt(ctTeam.total.averageStoryPoints, 1)}</div><div class="lbl">Avg Points/Ticket</div></div>
+          </div>
+        </div>`);
+      }
     }
     sections.push(`<div class="section">
       <div class="section-title"><span class="icon">&#9201;</span> Cycle Time & Lead Time</div>
@@ -721,6 +758,12 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
         `Weekly Lead Time — Average \u2014 ${team}`, "&#128197;", ctTeam.weekly,
         [{ label: "Average (days)", extract: (s: any) => s.averageLeadTimeDays, color: "#fbbf24" }]
       ));
+      if (ctTeam.total?.totalStoryPoints > 0) {
+        sections.push(renderWeeklyTrendChart(
+          `Weekly Velocity \u2014 ${team}`, "&#127937;", ctTeam.weekly,
+          [{ label: "Story Points", extract: (s: any) => s.totalStoryPoints, color: "#22d3ee" }]
+        ));
+      }
     }
   }
 

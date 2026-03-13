@@ -8,6 +8,9 @@ export interface CycleTimeStats {
   medianCycleTimeDays: number | null;
   averageLeadTimeDays: number | null;
   medianLeadTimeDays: number | null;
+  totalStoryPoints: number;
+  estimatedTicketCount: number;
+  averageStoryPoints: number | null;
 }
 
 export interface TeamCycleTimeSummary {
@@ -44,6 +47,8 @@ function average(values: number[]): number | null {
 function computeStats(records: MetricRecord[]): CycleTimeStats {
   const cycleTimes = records.map((r) => r.cycleTimeDays).filter((v): v is number => v !== null);
   const leadTimes = records.map((r) => r.leadTimeDays).filter((v): v is number => v !== null);
+  const storyPoints = records.map((r) => r.storyPoints).filter((v): v is number => v !== null);
+  const totalStoryPoints = storyPoints.reduce((s, v) => s + v, 0);
   return {
     ticketCount: records.length,
     cycleTimeTicketCount: cycleTimes.length,
@@ -52,6 +57,9 @@ function computeStats(records: MetricRecord[]): CycleTimeStats {
     medianCycleTimeDays: median(cycleTimes),
     averageLeadTimeDays: average(leadTimes),
     medianLeadTimeDays: median(leadTimes),
+    totalStoryPoints: parseFloat(totalStoryPoints.toFixed(2)),
+    estimatedTicketCount: storyPoints.length,
+    averageStoryPoints: average(storyPoints),
   };
 }
 

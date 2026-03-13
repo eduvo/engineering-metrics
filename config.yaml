@@ -1,8 +1,9 @@
-MB:
+ManageBac Web/Core:
   jira-cycle-time:
     startStatus: Ready For Development
     endStatus: Closed
-    filter:
+    estimationField: Story Points
+    filter: project = MB
   jira-bugs:
     severityFieldName: "Severity"
     customerBugsFilter: >-
@@ -29,7 +30,9 @@ MB Mobile:
   jira-cycle-time:
     startStatus: Ready For Development
     endStatus: Closed
-    filter:
+    estimationField: Story Points
+    filter: >-
+      project = "MB Mobile"
   jira-bugs:
     severityFieldName: "Severity"
     customerBugsFilter: >-
@@ -43,7 +46,9 @@ OpenApply:
   jira-cycle-time:
     startStatus: Ready For Development
     endStatus: Closed
-    filter:
+    estimationField: Story Points
+    filter: >-
+      project = OA
   jira-bugs:
     severityFieldName: "Severity"
     customerBugsFilter: >-
@@ -58,7 +63,9 @@ SchoolsBuddy:
   jira-cycle-time:
     startStatus: Ready For Development
     endStatus: Closed
-    filter:
+    estimationField: Story Points
+    filter: >-
+      project = SchoolsBuddy  
   jira-bugs:
     severityFieldName: "Severity"
     customerBugsFilter: >-
@@ -74,7 +81,9 @@ Atlas:
   jira-cycle-time:
     startStatus: Ready For Development
     endStatus: Closed
-    filter:
+    estimationField: Story Points
+    filter: >-
+      project = Atlas-Portland
   jira-bugs:
     severityFieldName: "Severity"
     customerBugsFilter: >-

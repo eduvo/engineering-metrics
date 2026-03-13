@@ -13,8 +13,8 @@ export interface JiraIssue extends Omit<SharedJiraIssue, "changelog"> {
 }
 
 export interface JiraExtractOptions {
-  projectKey: string;
   since: string;
   until?: string;
   filter?: string;
+  estimationField?: string;
 }

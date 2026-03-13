@@ -5,6 +5,7 @@ export function computeCycleTime(
   issues: JiraIssue[],
   startStatus: string,
   endStatus: string,
+  estimationFieldId: string | null = null,
 ): MetricRecord[] {
   const records: MetricRecord[] = [];
   const startUpper = startStatus.toUpperCase();
@@ -29,6 +30,14 @@ export function computeCycleTime(
       }
     }
 
+    let storyPoints: number | null = null;
+    if (estimationFieldId) {
+      const raw = (issue.fields as unknown as Record<string, unknown>)[estimationFieldId];
+      if (typeof raw === "number") {
+        storyPoints = raw;
+      }
+    }
+
     if (cycleTimeDays === null && leadTimeDays === null) continue;
 
     records.push({
@@ -39,6 +48,7 @@ export function computeCycleTime(
       assignee: issue.fields.assignee?.displayName ?? null,
       cycleTimeDays,
       leadTimeDays,
+      storyPoints,
       startDate: startDate?.toISOString() ?? null,
       endDate: endDate?.toISOString() ?? null,
       startStatus,
