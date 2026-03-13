@@ -37,7 +37,9 @@ MB Mobile:
       - eduvo/managebac-mobile-android
   jira-cycle-time:
     startStatus: In Progress
-    endStatus: Closed
+    endStatus: 
+      - Closed
+      - Resolved
     estimationField: Story Points
     filter: >-
       project = "MB Mobile"

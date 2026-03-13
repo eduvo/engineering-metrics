@@ -371,11 +371,17 @@ function renderCrossTeamKPIs(cycleTime: any, bugs: any, prs: any, sla: any): str
       </div>
     </div>`);
     if (ct.totalStoryPoints > 0) {
+      const weeklyPoints = Object.values(cycleTime.summary.crossTeam.weekly ?? {}).map((w: any) => w.totalStoryPoints).filter((v: number) => v > 0);
+      const avgWeeklyVelocity = weeklyPoints.length > 0 ? weeklyPoints.reduce((s: number, v: number) => s + v, 0) / weeklyPoints.length : null;
       cards.push(`<div class="card">
         <h3>&#127937; Velocity</h3>
-        <div class="metric-value">${fmt(ct.totalStoryPoints, 1)}<span style="font-size:16px;color:var(--text-muted)"> pts</span></div>
-        <div class="metric-label">Total story points (${ct.estimatedTicketCount} estimated tickets)</div>
+        <div class="metric-value">${fmt(avgWeeklyVelocity, 1)}<span style="font-size:16px;color:var(--text-muted)"> pts/wk</span></div>
+        <div class="metric-label">Average weekly velocity (${weeklyPoints.length} weeks)</div>
         <div style="margin-top:12px" class="metric-row">
+          <span class="label">Total</span>
+          <span class="value">${fmt(ct.totalStoryPoints, 1)} pts</span>
+        </div>
+        <div class="metric-row">
           <span class="label">Average per ticket</span>
           <span class="value">${fmt(ct.averageStoryPoints, 1)} pts</span>
         </div>
@@ -613,11 +619,17 @@ function renderTeamKPIs(team: string, cycleTime: any, bugs: any, prs: any, sla: 
         <span class="value">${fmt(ct.averageLeadTimeDays)} days</span>
       </div>
     </div>`);    if (ct.totalStoryPoints > 0) {
+      const weeklyPoints = Object.values(ctTeam.weekly ?? {}).map((w: any) => w.totalStoryPoints).filter((v: number) => v > 0);
+      const avgWeeklyVelocity = weeklyPoints.length > 0 ? weeklyPoints.reduce((s: number, v: number) => s + v, 0) / weeklyPoints.length : null;
       cards.push(`<div class=\"card\">
         <h3>&#127937; Velocity</h3>
-        <div class=\"metric-value\">${fmt(ct.totalStoryPoints, 1)}<span style=\"font-size:16px;color:var(--text-muted)\"> pts</span></div>
-        <div class=\"metric-label\">Total story points (${ct.estimatedTicketCount} estimated tickets)</div>
+        <div class=\"metric-value\">${fmt(avgWeeklyVelocity, 1)}<span style=\"font-size:16px;color:var(--text-muted)\"> pts/wk</span></div>
+        <div class=\"metric-label\">Average weekly velocity (${weeklyPoints.length} weeks)</div>
         <div style=\"margin-top:12px\" class=\"metric-row\">
+          <span class=\"label\">Total</span>
+          <span class=\"value\">${fmt(ct.totalStoryPoints, 1)} pts</span>
+        </div>
+        <div class=\"metric-row\">
           <span class=\"label\">Average per ticket</span>
           <span class=\"value\">${fmt(ct.averageStoryPoints, 1)} pts</span>
         </div>
@@ -727,11 +739,13 @@ function renderTeam(team: string, cycleTime: any, bugs: any, prs: any, sla: any)
         </div>
       </div>`);
       if (ctTeam.total.totalStoryPoints > 0) {
+        const weeklyPts = Object.values(ctTeam.weekly ?? {}).map((w: any) => w.totalStoryPoints).filter((v: number) => v > 0);
+        const avgWkVel = weeklyPts.length > 0 ? weeklyPts.reduce((s: number, v: number) => s + v, 0) / weeklyPts.length : null;
         cards.push(`<div class="card">
           <h3>Velocity</h3>
           <div class="mini-grid">
+            <div class="mini-stat"><div class="val">${fmt(avgWkVel, 1)}</div><div class="lbl">Avg Weekly Velocity</div></div>
             <div class="mini-stat"><div class="val">${fmt(ctTeam.total.totalStoryPoints, 1)}</div><div class="lbl">Total Story Points</div></div>
-            <div class="mini-stat"><div class="val">${ctTeam.total.estimatedTicketCount}</div><div class="lbl">Estimated Tickets</div></div>
             <div class="mini-stat"><div class="val">${fmt(ctTeam.total.averageStoryPoints, 1)}</div><div class="lbl">Avg Points/Ticket</div></div>
           </div>
         </div>`);
