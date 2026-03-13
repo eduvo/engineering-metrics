@@ -4,16 +4,18 @@ import { JiraIssue } from "./types.js";
 export function computeCycleTime(
   issues: JiraIssue[],
   startStatus: string,
-  endStatus: string,
+  endStatus: string | string[],
   estimationFieldId: string | null = null,
 ): MetricRecord[] {
   const records: MetricRecord[] = [];
   const startUpper = startStatus.toUpperCase();
-  const endUpper = endStatus.toUpperCase();
+  const endStatusesUpper = (Array.isArray(endStatus) ? endStatus : [endStatus]).map(s => s.toUpperCase());
 
   for (const issue of issues) {
     const startDate = findFirstTransitionTo(issue, startUpper);
-    const endDate = findFirstTransitionTo(issue, endUpper);
+    const endResult = findFirstTransitionToAny(issue, endStatusesUpper);
+    const endDate = endResult?.date ?? null;
+    const matchedEndStatus = endResult?.status ?? (Array.isArray(endStatus) ? endStatus[0] : endStatus);
 
     let cycleTimeDays: number | null = null;
     if (startDate && endDate && endDate > startDate) {
@@ -52,7 +54,7 @@ export function computeCycleTime(
       startDate: startDate?.toISOString() ?? null,
       endDate: endDate?.toISOString() ?? null,
       startStatus,
-      endStatus,
+      endStatus: matchedEndStatus,
       statusTransitions: extractStatusTransitions(issue),
       createdDate: issue.fields.created,
       resolvedDate: issue.fields.resolutiondate,
@@ -70,6 +72,24 @@ function findFirstTransitionTo(issue: JiraIssue, statusUpper: string): Date | nu
         item.toString?.toUpperCase() === statusUpper
       ) {
         return new Date(history.created);
+      }
+    }
+  }
+  return null;
+}
+
+function findFirstTransitionToAny(
+  issue: JiraIssue,
+  statusesUpper: string[],
+): { date: Date; status: string } | null {
+  for (const history of issue.changelog.histories) {
+    for (const item of history.items) {
+      if (
+        item.field === "status" &&
+        item.toString &&
+        statusesUpper.includes(item.toString.toUpperCase())
+      ) {
+        return { date: new Date(history.created), status: item.toString };
       }
     }
   }

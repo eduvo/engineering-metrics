@@ -93,7 +93,8 @@ async function runJiraCycleTime(opts: ETLOptions) {
       }
 
       console.log(`\n=== Team: ${teamKey} ===`);
-      console.log(`Using statuses: "${cycleTimeConfig.startStatus}" \u2192 "${cycleTimeConfig.endStatus}"`);
+      const endStatusLabel = Array.isArray(cycleTimeConfig.endStatus) ? cycleTimeConfig.endStatus.join(", ") : cycleTimeConfig.endStatus;
+      console.log(`Using statuses: "${cycleTimeConfig.startStatus}" \u2192 "${endStatusLabel}"`);
 
       const pipeline = new JiraCycleTimePipeline(config, cycleTimeConfig, {
         since: opts.since,

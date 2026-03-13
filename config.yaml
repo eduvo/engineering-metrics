@@ -1,7 +1,10 @@
 ManageBac Web/Core:
   jira-cycle-time:
-    startStatus: Ready For Development
-    endStatus: Closed
+    startStatus: In Progress
+    endStatus: 
+      - Closed
+      - Done
+      - Resolved
     estimationField: Story Points
     filter: project = MB
   jira-bugs:
@@ -16,6 +19,7 @@ ManageBac Web/Core:
   github-prs:
     repos:
       - eduvo/mb_rails4
+      - eduvo/managebac-ui
   newrelic-sla:
     apps:
       - ManageBac Canada
@@ -27,8 +31,12 @@ ManageBac Web/Core:
       - Portal USA (Production)
 
 MB Mobile:
+  github-prs:
+    repos:
+      - eduvo/managebac-mobile-native-ios
+      - eduvo/managebac-mobile-android
   jira-cycle-time:
-    startStatus: Ready For Development
+    startStatus: In Progress
     endStatus: Closed
     estimationField: Story Points
     filter: >-
@@ -43,8 +51,13 @@ MB Mobile:
       AND status != "On Hold"
 
 OpenApply:
+  github-prs:
+    repos:
+      - eduvo/openapply
+      - eduvo/openapply-mobile-native-android
+      - eduvo/openapply-mobile-native-ios
   jira-cycle-time:
-    startStatus: Ready For Development
+    startStatus: In Progress
     endStatus: Closed
     estimationField: Story Points
     filter: >-
@@ -60,9 +73,13 @@ OpenApply:
       - OpenApply EU (Production)
 
 SchoolsBuddy:
+  github-prs:
+    repos:
+      - Everybuddyltd/SB-Mobile-Staff-App
+      - Everybuddyltd/WebApplications
   jira-cycle-time:
-    startStatus: Ready For Development
-    endStatus: Closed
+    startStatus: In Progress
+    endStatus: Done
     estimationField: Story Points
     filter: >-
       project = SchoolsBuddy  
@@ -78,8 +95,13 @@ SchoolsBuddy:
       - SchoolsBuddy (US)
 
 Atlas:
+  github-prs:
+    repos:
+      - eduvo/AtlasAPI
+      - eduvo/AtlasFrontend
+      - eduvo/Atlas
   jira-cycle-time:
-    startStatus: Ready For Development
+    startStatus: In Progress
     endStatus: Closed
     estimationField: Story Points
     filter: >-

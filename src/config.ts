@@ -13,7 +13,7 @@ export interface JiraConfig {
 
 export interface CycleTimeConfig {
   startStatus: string;
-  endStatus: string;
+  endStatus: string | string[];
   filter?: string;
   estimationField?: string;
 }
